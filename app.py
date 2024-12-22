@@ -121,7 +121,7 @@ def main():
             # 選択肢の表示
             selected_option = st.radio("意味を選んでください", options, key="options", index=options.index(st.session_state.selected_option) if st.session_state.selected_option else None)
 
-            # 選択肢が変更されたら選択肢を保存
+            # 選択肢が変更された場合に選択肢を保存
             if selected_option != st.session_state.selected_option:
                 st.session_state.selected_option = selected_option
 
