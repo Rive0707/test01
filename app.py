@@ -45,16 +45,10 @@ def main():
     st.sidebar.write(f"**正解数:** {progress['correct']}")
     st.sidebar.write(f"**不正解数:** {progress['incorrect']}")
 
-    # 進捗リセットボタンを押したときにセッション状態を使って一回のみリセット処理を行う
-    reset_button_key = "reset_button"
-    if reset_button_key not in st.session_state:
-        st.session_state[reset_button_key] = False
-
-    if st.sidebar.button("進捗をリセット", key="reset_progress"):
+    if st.sidebar.button("進捗をリセット"):
         progress = {"correct": 0, "incorrect": 0, "incorrect_words": []}
         save_progress(progress)
-        st.session_state[reset_button_key] = True
-        st.experimental_rerun()  # ここでリセットが完了後にアプリを再実行
+        st.experimental_rerun()
 
     # CSVファイルアップロード
     uploaded_file = st.file_uploader("単語データ（CSV形式）をアップロードしてください", type="csv")
@@ -117,8 +111,8 @@ def main():
                     options.append(option)
             random.shuffle(options)
 
-            # 回答を選んだかどうかのチェック
-            selected_option = st.radio("意味を選んでください", options)
+            # 回答を選択
+            selected_option = st.radio("意味を選んでください", options, key="options")
 
             # 「回答する」ボタンが押されたときの処理
             if st.button("回答する"):
@@ -132,8 +126,6 @@ def main():
                         progress['incorrect_words'].append(current_word)
 
                     save_progress(progress)
-                    # セッション状態を更新して再実行しない
-                    st.session_state["review_mode"] = False
                     st.experimental_rerun()  # 回答後、問題を次に進める
                 else:
                     st.warning("答えを選んでから回答してください。")
@@ -143,4 +135,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
