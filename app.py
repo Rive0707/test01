@@ -77,19 +77,18 @@ def main():
 
         # 単語をランダムに選ぶ
         if words_to_study:
-            current_word = random.choice(words_to_study)
-
-            # 選択された単語をsession_stateに保存
             if "current_word" not in st.session_state:
-                st.session_state.current_word = current_word
+                st.session_state.current_word = random.choice(words_to_study)
 
-            st.write(f"**英単語:** {st.session_state.current_word['英単語']}")
-            st.write(f"_例文:_ {st.session_state.current_word['例文']}")
+            current_word = st.session_state.current_word
+
+            st.write(f"**英単語:** {current_word['英単語']}")
+            st.write(f"_例文:_ {current_word['例文']}")
 
             # 音声再生
             play_word_button = st.button("単語を再生")
             if play_word_button:
-                audio_base64 = text_to_audio_base64(st.session_state.current_word['英単語'])
+                audio_base64 = text_to_audio_base64(current_word['英単語'])
                 audio_html = f"""
                     <audio controls autoplay>
                         <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
@@ -99,7 +98,7 @@ def main():
 
             play_example_button = st.button("例文を再生")
             if play_example_button:
-                audio_base64 = text_to_audio_base64(st.session_state.current_word['例文'])
+                audio_base64 = text_to_audio_base64(current_word['例文'])
                 audio_html = f"""
                     <audio controls autoplay>
                         <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
@@ -108,26 +107,31 @@ def main():
                 st.markdown(audio_html, unsafe_allow_html=True)
 
             # 選択肢をシャッフル
-            options = [st.session_state.current_word['日本語訳']]
+            options = [current_word['日本語訳']]
             while len(options) < 4:
                 option = random.choice(word_data['日本語訳'])
                 if option not in options:
                     options.append(option)
             random.shuffle(options)
 
-            # 回答を選択
+            # ここで選ばれた選択肢を保持
+            if "selected_option" not in st.session_state:
+                st.session_state.selected_option = None
+
+            # 選択肢の表示
             selected_option = st.radio("意味を選んでください", options, key="options")
 
             # 「回答する」ボタンが押されたときの処理
             if st.button("回答する"):
                 if selected_option:
-                    if selected_option == st.session_state.current_word['日本語訳']:
+                    st.session_state.selected_option = selected_option
+                    if selected_option == current_word['日本語訳']:
                         st.success("正解です！")
                         progress['correct'] += 1
                     else:
-                        st.error(f"不正解！正解は: {st.session_state.current_word['日本語訳']}")
+                        st.error(f"不正解！正解は: {current_word['日本語訳']}")
                         progress['incorrect'] += 1
-                        progress['incorrect_words'].append(st.session_state.current_word)
+                        progress['incorrect_words'].append(current_word)
 
                     save_progress(progress)
                     del st.session_state.current_word  # 問題を進めるために、選ばれた問題を削除
