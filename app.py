@@ -51,10 +51,10 @@ def main():
         st.session_state[reset_button_key] = False
 
     if st.sidebar.button("進捗をリセット", key="reset_progress"):
-        st.session_state[reset_button_key] = True
         progress = {"correct": 0, "incorrect": 0, "incorrect_words": []}
         save_progress(progress)
-        st.experimental_rerun()
+        st.session_state[reset_button_key] = True
+        st.experimental_rerun()  # ここでリセットが完了後にアプリを再実行
 
     # CSVファイルアップロード
     uploaded_file = st.file_uploader("単語データ（CSV形式）をアップロードしてください", type="csv")
@@ -130,6 +130,8 @@ def main():
                         progress['incorrect_words'].append(current_word)
 
                     save_progress(progress)
+                    # セッション状態を更新して再実行しない
+                    st.session_state["review_mode"] = False
                     st.experimental_rerun()
                 else:
                     st.warning("答えを選んでから回答してください。")
@@ -139,4 +141,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
