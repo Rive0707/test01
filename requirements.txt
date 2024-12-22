@@ -1,2 +1,2 @@
 streamlit
-gtts
+gTTS==2.3.2
