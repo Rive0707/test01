@@ -109,19 +109,23 @@ def main():
                     options.append(option)
             random.shuffle(options)
 
-            # 回答ボタン
+            # 回答を選んだかどうかのチェック
             selected_option = st.radio("意味を選んでください", options)
-            if st.button("回答する"):
-                if selected_option == current_word['日本語訳']:
-                    st.success("正解です！")
-                    progress['correct'] += 1
-                else:
-                    st.error(f"不正解！正解は: {current_word['日本語訳']}")
-                    progress['incorrect'] += 1
-                    progress['incorrect_words'].append(current_word)
+            if selected_option:
+                if st.button("回答する"):
+                    if selected_option == current_word['日本語訳']:
+                        st.success("正解です！")
+                        progress['correct'] += 1
+                    else:
+                        st.error(f"不正解！正解は: {current_word['日本語訳']}")
+                        progress['incorrect'] += 1
+                        progress['incorrect_words'].append(current_word)
 
-                save_progress(progress)
-                st.experimental_rerun()
+                    save_progress(progress)
+                    st.experimental_rerun()
+            else:
+                st.warning("答えを選んでから回答してください。")
+
         else:
             st.info("すべての単語を学習しました！")
 
