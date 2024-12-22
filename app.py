@@ -120,7 +120,7 @@ def main():
             # 回答を選んだかどうかのチェック
             selected_option = st.radio("意味を選んでください", options)
 
-            # 「回答する」ボタンが押されたかどうか
+            # 「回答する」ボタンが押されたときの処理
             if st.button("回答する"):
                 if selected_option:
                     if selected_option == current_word['日本語訳']:
@@ -143,3 +143,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
