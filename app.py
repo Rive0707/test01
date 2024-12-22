@@ -114,7 +114,7 @@ def main():
                     options.append(option)
             random.shuffle(options)
 
-            # ここで選ばれた選択肢を保持
+            # 選択肢のインデックスを保存
             if "selected_option" not in st.session_state:
                 st.session_state.selected_option = None
 
