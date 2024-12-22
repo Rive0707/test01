@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 import pandas as pd
-from gtts import gTTS
+from gTTS import gTTS
 import base64
 import os
 import json
