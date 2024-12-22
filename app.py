@@ -1,6 +1,6 @@
 import streamlit as st
-import pandas as pd
 import random
+import pandas as pd
 from gtts import gTTS
 import base64
 import os
@@ -114,14 +114,18 @@ def main():
                     options.append(option)
             random.shuffle(options)
 
-            # 選択肢のインデックスを保存
+            # 初期選択肢を保持
             if "selected_option" not in st.session_state:
                 st.session_state.selected_option = None
 
-            # 選択肢の表示
-            selected_option = st.radio("意味を選んでください", options, index=options.index(st.session_state.selected_option) if st.session_state.selected_option else None)
+            # ラジオボタンのインデックスを選択された選択肢に設定
+            selected_option = st.radio(
+                "意味を選んでください", 
+                options, 
+                index=options.index(st.session_state.selected_option) if st.session_state.selected_option else None
+            )
 
-            # 選択肢が変更された場合に選択肢を保存
+            # 選択肢が変更された場合にその選択肢を保存
             if selected_option != st.session_state.selected_option:
                 st.session_state.selected_option = selected_option
 
