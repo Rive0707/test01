@@ -119,13 +119,16 @@ def main():
                 st.session_state.selected_option = None
 
             # 選択肢の表示
-            selected_option = st.radio("意味を選んでください", options, key="options")
+            selected_option = st.radio("意味を選んでください", options, key="options", index=options.index(st.session_state.selected_option) if st.session_state.selected_option else None)
+
+            # 選択肢が変更されたら選択肢を保存
+            if selected_option != st.session_state.selected_option:
+                st.session_state.selected_option = selected_option
 
             # 「回答する」ボタンが押されたときの処理
             if st.button("回答する"):
-                if selected_option:
-                    st.session_state.selected_option = selected_option
-                    if selected_option == current_word['日本語訳']:
+                if st.session_state.selected_option:
+                    if st.session_state.selected_option == current_word['日本語訳']:
                         st.success("正解です！")
                         progress['correct'] += 1
                     else:
@@ -136,6 +139,7 @@ def main():
                     save_progress(progress)
                     # 次の問題に進むために、現在の問題を削除して、進めるようにする
                     del st.session_state.current_word
+                    st.session_state.selected_option = None  # 選択肢をリセット
                     st.experimental_rerun()  # 回答後、問題を次に進める
                 else:
                     st.warning("答えを選んでから回答してください。")
