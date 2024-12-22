@@ -45,7 +45,13 @@ def main():
     st.sidebar.write(f"**正解数:** {progress['correct']}")
     st.sidebar.write(f"**不正解数:** {progress['incorrect']}")
 
-    if st.sidebar.button("進捗をリセット"):
+    # 進捗リセットボタンを押したときにセッション状態を使って一回のみリセット処理を行う
+    reset_button_key = "reset_button"
+    if reset_button_key not in st.session_state:
+        st.session_state[reset_button_key] = False
+
+    if st.sidebar.button("進捗をリセット", key="reset_progress"):
+        st.session_state[reset_button_key] = True
         progress = {"correct": 0, "incorrect": 0, "incorrect_words": []}
         save_progress(progress)
         st.experimental_rerun()
@@ -130,10 +136,6 @@ def main():
 
         else:
             st.info("すべての単語を学習しました！")
-
-if __name__ == "__main__":
-    main()
-
 
 if __name__ == "__main__":
     main()
