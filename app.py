@@ -134,7 +134,8 @@ def main():
                         progress['incorrect_words'].append(current_word)
 
                     save_progress(progress)
-                    del st.session_state.current_word  # 問題を進めるために、選ばれた問題を削除
+                    # 次の問題に進むために、現在の問題を削除して、進めるようにする
+                    del st.session_state.current_word
                     st.experimental_rerun()  # 回答後、問題を次に進める
                 else:
                     st.warning("答えを選んでから回答してください。")
