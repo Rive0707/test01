@@ -89,7 +89,8 @@ def main():
             st.write(f"_例文:_ {current_word['例文']}")
 
             # 音声再生
-            if st.button("単語を再生"):
+            play_word_button = st.button("単語を再生")
+            if play_word_button:
                 audio_base64 = text_to_audio_base64(current_word['英単語'])
                 audio_html = f"""
                     <audio controls autoplay>
@@ -98,7 +99,8 @@ def main():
                 """
                 st.markdown(audio_html, unsafe_allow_html=True)
 
-            if st.button("例文を再生"):
+            play_example_button = st.button("例文を再生")
+            if play_example_button:
                 audio_base64 = text_to_audio_base64(current_word['例文'])
                 audio_html = f"""
                     <audio controls autoplay>
@@ -132,7 +134,7 @@ def main():
                     save_progress(progress)
                     # セッション状態を更新して再実行しない
                     st.session_state["review_mode"] = False
-                    st.experimental_rerun()
+                    st.experimental_rerun()  # 回答後、問題を次に進める
                 else:
                     st.warning("答えを選んでから回答してください。")
 
