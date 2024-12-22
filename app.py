@@ -111,8 +111,10 @@ def main():
 
             # 回答を選んだかどうかのチェック
             selected_option = st.radio("意味を選んでください", options)
-            if selected_option:
-                if st.button("回答する"):
+
+            # 「回答する」ボタンが押されたかどうか
+            if st.button("回答する"):
+                if selected_option:
                     if selected_option == current_word['日本語訳']:
                         st.success("正解です！")
                         progress['correct'] += 1
@@ -123,11 +125,15 @@ def main():
 
                     save_progress(progress)
                     st.experimental_rerun()
-            else:
-                st.warning("答えを選んでから回答してください。")
+                else:
+                    st.warning("答えを選んでから回答してください。")
 
         else:
             st.info("すべての単語を学習しました！")
+
+if __name__ == "__main__":
+    main()
+
 
 if __name__ == "__main__":
     main()
