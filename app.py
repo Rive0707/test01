@@ -80,6 +80,7 @@ def start_timer():
         st.session_state.time_left -= 1
         if st.session_state.answered:  # 回答済みならタイマー停止
             break
+        st.experimental_rerun()
     if st.session_state.time_left == 0 and not st.session_state.answered:
         st.session_state.answer_message = "時間切れ！次の問題に進みます。"
         st.session_state.progress['incorrect'] += 1
@@ -243,8 +244,8 @@ def main():
                     else:
                         st.error(st.session_state.answer_message, icon="❌")
 
-                # 残り時間の表示
-                st.warning(f"残り時間: {st.session_state.time_left} 秒", icon="⏳")
+                # 残り時間の視覚的カウントダウン表示
+                st.markdown(f"<h3 style='color:orange;'>残り時間: {st.session_state.time_left} 秒</h3>", unsafe_allow_html=True)
 
                 # タイマーの開始
                 if not st.session_state.answered and "timer_thread" not in st.session_state:
@@ -260,4 +261,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
