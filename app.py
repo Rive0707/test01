@@ -3,7 +3,6 @@ import pandas as pd
 import random
 from gtts import gTTS
 import base64
-import os
 
 # データをロード
 def load_data(file_path):
@@ -17,7 +16,6 @@ def text_to_audio_base64(text, lang="en"):
         tts.write_to_fp(f)
     with open("temp.mp3", "rb") as f:
         audio_data = f.read()
-    # Base64エンコードして返す
     return base64.b64encode(audio_data).decode()
 
 # 音声再生用HTML埋め込み
@@ -31,13 +29,15 @@ def play_audio(text, lang="en"):
     """
     st.markdown(audio_html, unsafe_allow_html=True)
 
-# 初期化
+# セッション状態初期化
 if "current_question" not in st.session_state:
     st.session_state.current_question = 0
 if "score" not in st.session_state:
     st.session_state.score = 0
 if "incorrect_words" not in st.session_state:
     st.session_state.incorrect_words = []
+if "options" not in st.session_state:
+    st.session_state.options = []
 if "selected_option" not in st.session_state:
     st.session_state.selected_option = None
 
@@ -75,8 +75,8 @@ def main():
         if st.button("単語を再生", key=f"word_{current_question_index}"):
             play_audio(current_word["英単語"])
         
-        # 選択肢をシャッフル（問題が変わるときに更新）
-        if "options" not in st.session_state or st.session_state.current_question != current_question_index:
+        # 選択肢を更新（問題が変わるたびに新たに生成）
+        if not st.session_state.options or st.session_state.current_question != current_question_index:
             options = [current_word['日本語訳']]
             while len(options) < 4:
                 option = random.choice(word_data['日本語訳'])
@@ -84,19 +84,17 @@ def main():
                     options.append(option)
             random.shuffle(options)
             st.session_state.options = options
-            st.session_state.selected_option = None  # 選択肢リセット
+            st.session_state.selected_option = None  # 選択肢をリセット
 
-        # 選択肢を表示（状態を管理）
+        # 選択肢を表示
         selected_option = st.radio(
             "意味を選んでください",
             st.session_state.options,
             index=st.session_state.selected_option if st.session_state.selected_option is not None else 0,
-            key=f"radio_{current_question_index}",
         )
         
         # 回答ボタン
-        if st.button("回答する"):
-            st.session_state.selected_option = st.session_state.options.index(selected_option)
+        if st.button("回答する", key=f"answer_{current_question_index}"):
             if selected_option == current_word['日本語訳']:
                 st.success("正解です！")
                 st.session_state.score += 1
@@ -106,7 +104,8 @@ def main():
             
             # 次の問題へ
             st.session_state.current_question += 1
-            st.session_state.selected_option = None  # 選択肢の状態をリセット
+            st.session_state.options = []  # 新しい問題のために選択肢をリセット
+            st.experimental_rerun()  # ページをリロードして新しい問題を表示
 
         # 現在のスコア表示
         st.write(f"現在のスコア: {st.session_state.score}")
