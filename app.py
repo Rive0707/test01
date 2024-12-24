@@ -5,6 +5,8 @@ from gtts import gTTS
 import base64
 import os
 import json
+from PIL import Image
+import io
 
 # スコアと進捗を保存するファイル
 PROGRESS_FILE = "progress.json"
@@ -33,6 +35,13 @@ def text_to_audio_base64(text, lang="en"):
 # CSVデータをロード
 def load_data(file_path):
     return pd.read_csv(file_path)
+
+# 画像をロード
+def load_image(image_bytes):
+    try:
+        return Image.open(io.BytesIO(image_bytes))
+    except Exception:
+        return None
 
 # 問題をランダムに並び替える
 def shuffle_questions(words):
@@ -85,6 +94,8 @@ def main():
         st.session_state.answer_message = None
     if "shuffled_words" not in st.session_state:
         st.session_state.shuffled_words = None
+    if "image_files" not in st.session_state:
+        st.session_state.image_files = {}
 
     progress = st.session_state.progress
 
@@ -104,8 +115,20 @@ def main():
         st.session_state.answer_message = None
         st.session_state.shuffled_words = None
 
-    # CSVファイルアップロード
-    uploaded_file = st.file_uploader("単語データ（CSV形式）をアップロードしてください", type="csv")
+    # CSVファイルとイメージファイルのアップロード
+    col1, col2 = st.columns(2)
+    with col1:
+        uploaded_file = st.file_uploader("単語データ（CSV形式）をアップロードしてください", type="csv")
+    with col2:
+        uploaded_images = st.file_uploader("画像をアップロードしてください", type=None, accept_multiple_files=True)
+        
+    # 画像ファイルの処理
+    if uploaded_images:
+        st.session_state.image_files = {}
+        for image_file in uploaded_images:
+            # ファイル名から拡張子を除いた部分を取得
+            image_name = os.path.splitext(image_file.name)[0]
+            st.session_state.image_files[image_name] = image_file.read()
 
     if uploaded_file:
         word_data = load_data(uploaded_file)
@@ -151,8 +174,19 @@ def main():
             else:
                 current_word = words_to_study[st.session_state.question_progress]
 
-                st.write(f"**英単語:** {current_word['英単語']}")
-                st.write(f"_例文:_ {current_word['例文']}")
+                # 英単語と画像を横に並べて表示
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    st.write(f"**英単語:** {current_word['英単語']}")
+                    st.write(f"_例文:_ {current_word['例文']}")
+
+                with col2:
+                    # 対応する画像があれば表示
+                    if current_word['英単語'] in st.session_state.image_files:
+                        image_data = st.session_state.image_files[current_word['英単語']]
+                        image = load_image(image_data)
+                        if image:
+                            st.image(image, use_column_width=True)
 
                 if st.button("単語を再生"):
                     audio_base64 = text_to_audio_base64(current_word['英単語'])
