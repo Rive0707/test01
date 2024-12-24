@@ -34,11 +34,6 @@ def text_to_audio_base64(text, lang="en"):
 def load_data(file_path):
     return pd.read_csv(file_path)
 
-# 次へボタンのコールバック関数
-def next_question():
-    st.session_state.options = []  # 選択肢をリセット
-    st.session_state.selected_option = None  # 選択肢をリセット
-
 # 回答ボタンのコールバック関数
 def check_answer(current_word):
     if st.session_state.selected_option == current_word['日本語訳']:
@@ -141,10 +136,13 @@ def main():
 
             # 次の問題に進むボタン
             if st.button("次へ"):
-                next_question()
+                st.session_state.options = []  # 選択肢をリセット
+                st.session_state.selected_option = None  # 選択肢をリセット
+                st.experimental_rerun()  # 画面をリロードして新しい問題を表示
 
         else:
             st.info("すべての単語を学習しました！")
 
 if __name__ == "__main__":
     main()
+
