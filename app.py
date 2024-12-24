@@ -38,6 +38,8 @@ if "score" not in st.session_state:
     st.session_state.score = 0
 if "incorrect_words" not in st.session_state:
     st.session_state.incorrect_words = []
+if "selected_option" not in st.session_state:
+    st.session_state.selected_option = None
 
 # メイン関数
 def main():
@@ -74,18 +76,26 @@ def main():
             play_audio(current_word["英単語"])
         
         # 選択肢をシャッフル
-        options = [current_word['日本語訳']]
-        while len(options) < 4:
-            option = random.choice(word_data['日本語訳'])
-            if option not in options:
-                options.append(option)
-        random.shuffle(options)
-        
-        # 選択肢
-        selected_option = st.radio("意味を選んでください", options, key=f"radio_{current_question_index}")
+        if "options" not in st.session_state or st.session_state.current_question != current_question_index:
+            options = [current_word['日本語訳']]
+            while len(options) < 4:
+                option = random.choice(word_data['日本語訳'])
+                if option not in options:
+                    options.append(option)
+            random.shuffle(options)
+            st.session_state.options = options
+
+        # 選択肢を表示（状態を管理）
+        selected_option = st.radio(
+            "意味を選んでください",
+            st.session_state.options,
+            index=st.session_state.selected_option if st.session_state.selected_option is not None else 0,
+            key=f"radio_{current_question_index}",
+        )
         
         # 回答ボタン
         if st.button("回答する"):
+            st.session_state.selected_option = st.session_state.options.index(selected_option)
             if selected_option == current_word['日本語訳']:
                 st.success("正解です！")
                 st.session_state.score += 1
@@ -95,6 +105,7 @@ def main():
             
             # 次の問題へ
             st.session_state.current_question += 1
+            st.session_state.selected_option = None  # 選択肢の状態をリセット
 
         # 現在のスコア表示
         st.write(f"現在のスコア: {st.session_state.score}")
@@ -103,4 +114,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
