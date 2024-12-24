@@ -74,26 +74,29 @@ def check_answer(current_word):
         save_progress(st.session_state.progress)
         st.session_state.answered = True
 
-# タイマーを開始する関数（大幅に変更）
 def start_timer():
     if "time_left" not in st.session_state:
         st.session_state.time_left = 30
     timer_placeholder = st.empty()
+    start_time = time.time() #開始時間を記録
+    total_time = st.session_state.time_left
 
     while st.session_state.time_left > 0 and not st.session_state.answered:
+        elapsed_time = time.time() - start_time
+        st.session_state.time_left = max(0, total_time - int(elapsed_time))
         m, s = divmod(st.session_state.time_left, 60)
         timer_placeholder.metric("残り時間", f"{m:02d}:{s:02d}")
-        time.sleep(1)
-        st.session_state.time_left -= 1
+        time.sleep(0.1)  # 0.1秒ごとに更新
 
-    if st.session_state.time_left == 0 and not st.session_state.answered:
+    if st.session_state.time_left <= 0 and not st.session_state.answered: # <=に変更
         st.session_state.answer_message = "時間切れ！次の問題に進みます。"
         st.session_state.progress['incorrect'] += 1
         save_progress(st.session_state.progress)
+        st.session_state.time_left = 30 #時間切れになったらタイマーをリセット
         next_question()
-    elif st.session_state.answered:
+    elif st.session_state.answered: #回答されたらタイマーをリセット
+        st.session_state.time_left = 30
         timer_placeholder.empty()
-
 
 
 
@@ -285,8 +288,8 @@ def main():
                         start_timer()  # タイマーを開始
                 else:  # 回答済みの場合
                     st.session_state.timer_started = False  # タイマー開始フラグをリセット
-                    if "time_left" in st.session_state: #回答後にtime_leftをリセットする
-                        st.session_state.time_left = 30
+                    if "time_left" in st.session_state:
+                        st.session_state.time_left = 30 #回答後にtime_leftをリセットする
 
                 # 回答済みの場合のみ「次へ」ボタンを有効化
                 if st.button("次へ", disabled=not st.session_state.answered):
