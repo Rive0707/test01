@@ -75,7 +75,6 @@ def check_answer(current_word):
         st.session_state.answered = True
 
 
-
 # タイマーを開始する関数
 def start_timer():
     if "timer_active" not in st.session_state:
@@ -122,31 +121,6 @@ if st.button("タイマー開始"):
 if st.button("回答済み"):
     st.session_state.answered = True
 
-
-
-
-
-        # 時間切れの場合の処理
-        if st.session_state.time_left == 0 and not st.session_state.answered:
-            st.session_state.answer_message = "時間切れ！次の問題に進みます。"
-            st.session_state.progress['incorrect'] += 1
-            save_progress(st.session_state.progress)
-            next_question()  # 次の問題に進む
-
-        st.session_state.timer_active = False
-        timer_placeholder.empty()  # タイマー表示をクリア
-
-
-
-        # 時間切れの場合の処理
-        if st.session_state.time_left == 0 and not st.session_state.answered:
-            st.session_state.answer_message = "時間切れ！次の問題に進みます。"
-            st.session_state.progress['incorrect'] += 1
-            save_progress(st.session_state.progress)
-            next_question()  # 次の問題へ進む
-
-        st.session_state.timer_active = False
-        timer_placeholder.empty()  # タイマー表示をクリア
 
 
 # メイン関数
