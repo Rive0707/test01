@@ -43,8 +43,6 @@ if "review_mode" not in st.session_state:
     st.session_state.review_mode = False
 if "selected_option" not in st.session_state:
     st.session_state.selected_option = None
-if "next_question" not in st.session_state:
-    st.session_state.next_question = False
 if "question_progress" not in st.session_state:
     st.session_state.question_progress = 0  # 問題の進行状況
 
@@ -151,14 +149,14 @@ def main():
 
                     save_progress(progress)
 
-                    # 次の問題へ進む
-                    st.session_state.question_progress += 1
-                    st.session_state.options = []  # 選択肢をリセット
-                    st.session_state.selected_option = None  # 選択肢をリセット
+                    # 「次へ」ボタンを表示
+                    if st.button("次へ"):
+                        st.session_state.question_progress += 1
+                        st.session_state.options = []  # 選択肢をリセット
+                        st.session_state.selected_option = None  # 選択肢をリセット
 
         else:
             st.info("すべての単語を学習しました！")
 
 if __name__ == "__main__":
     main()
-
