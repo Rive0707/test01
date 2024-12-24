@@ -147,7 +147,7 @@ def main():
                         progress['incorrect_words'].append(current_word)
 
                 save_progress(progress)
-                st.experimental_rerun(0.3)
+                st.experimental_rerun()
                 st.session_state.next_question = True
         else:
             st.info("すべての単語を学習しました！")
