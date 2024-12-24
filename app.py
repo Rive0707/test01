@@ -43,6 +43,8 @@ if "review_mode" not in st.session_state:
     st.session_state.review_mode = False
 if "selected_option" not in st.session_state:
     st.session_state.selected_option = None
+if "next_question" not in st.session_state:
+    st.session_state.next_question = False
 
 # メイン関数
 def main():
@@ -62,7 +64,6 @@ def main():
         st.session_state.current_word = None
         st.session_state.options = []
         st.session_state.selected_option = None
-        st.experimental_rerun()
 
     # CSVファイルアップロード
     uploaded_file = st.file_uploader("単語データ（CSV形式）をアップロードしてください", type="csv")
@@ -90,8 +91,10 @@ def main():
 
         # 出題
         if words_to_study:
-            if not st.session_state.current_word:
+            if not st.session_state.current_word or st.session_state.next_question:
                 st.session_state.current_word = random.choice(words_to_study)
+                st.session_state.options = []  # 選択肢をリセット
+                st.session_state.next_question = False
 
             current_word = st.session_state.current_word
 
@@ -144,10 +147,7 @@ def main():
                         progress['incorrect_words'].append(current_word)
 
                 save_progress(progress)
-                st.session_state.current_word = None
-                st.session_state.options = []
-                st.session_state.selected_option = None
-                st.experimental_rerun()
+                st.session_state.next_question = True
         else:
             st.info("すべての単語を学習しました！")
 
