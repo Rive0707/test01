@@ -75,7 +75,6 @@ def check_answer(current_word):
 
 import time
 
-# タイマーを管理する関数
 def start_timer():
     if "timer_active" not in st.session_state or not st.session_state.timer_active:
         st.session_state.timer_active = True
