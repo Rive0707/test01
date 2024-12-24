@@ -138,7 +138,7 @@ def main():
                 st.info("すべての単語を学習しました！")
                 st.session_state.studied_words = []
                 st.session_state.options = []
-                st.session_state.current_word = None
+                st.session_state.selected_option = None
                 return
 
             current_word = random.choice(available_words)
@@ -183,8 +183,8 @@ def main():
                 st.session_state.options = []
                 st.session_state.selected_option = None
 
-    else:
-        st.info("CSVファイルをアップロードしてください。")
+        else:
+            st.info("CSVファイルをアップロードしてください。")
 
 if __name__ == "__main__":
     main()
