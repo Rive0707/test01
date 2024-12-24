@@ -36,28 +36,33 @@ def load_data(file_path):
 
 # 次へボタンのコールバック関数
 def next_question():
-    st.session_state.question_progress += 1
-    st.session_state.options = []  # 選択肢をリセット
-    st.session_state.selected_option = None  # 選択肢をリセット
+    if st.session_state.answered:  # 回答済みの場合のみ次の問題へ
+        st.session_state.question_progress += 1
+        st.session_state.options = []  # 選択肢をリセット
+        st.session_state.selected_option = None  # 選択肢をリセット
+        st.session_state.answered = False  # 回答状態をリセット
+        st.session_state.answer_message = None  # 回答メッセージをリセット
 
 # 回答ボタンのコールバック関数
 def check_answer(current_word):
-    if st.session_state.selected_option == current_word['日本語訳']:
-        st.success("正解です！")
-        st.session_state.progress['correct'] += 1
-    else:
-        st.error(f"不正解！正解は: {current_word['日本語訳']}")
-        st.session_state.progress['incorrect'] += 1
-    if current_word not in st.session_state.progress['incorrect_words']:
-        st.session_state.progress['incorrect_words'].append(current_word)
-    save_progress(st.session_state.progress)
+    if not st.session_state.answered:  # 未回答の場合のみ処理
+        if st.session_state.selected_option == current_word['日本語訳']:
+            st.session_state.answer_message = "正解です！"
+            st.session_state.progress['correct'] += 1
+        else:
+            st.session_state.answer_message = f"不正解！正解は: {current_word['日本語訳']}"
+            st.session_state.progress['incorrect'] += 1
+            if current_word not in st.session_state.progress['incorrect_words']:
+                st.session_state.progress['incorrect_words'].append(current_word)
+        save_progress(st.session_state.progress)
+        st.session_state.answered = True
 
 # メイン関数
 def main():
     st.title("英単語学習アプリ")
     st.subheader("英単語を楽しく学習しよう！")
 
-    # セッション状態初期化 (progress をセッションステートに移動)
+    # セッション状態初期化
     if "progress" not in st.session_state:
         st.session_state.progress = load_progress()
     if "current_word" not in st.session_state:
@@ -70,8 +75,12 @@ def main():
         st.session_state.selected_option = None
     if "question_progress" not in st.session_state:
         st.session_state.question_progress = 0
+    if "answered" not in st.session_state:
+        st.session_state.answered = False
+    if "answer_message" not in st.session_state:
+        st.session_state.answer_message = None
 
-    progress = st.session_state.progress  # セッションステートから取得
+    progress = st.session_state.progress
 
     # サイドバー: スコア表示と設定
     st.sidebar.markdown("### スコア")
@@ -85,6 +94,8 @@ def main():
         st.session_state.options = []
         st.session_state.selected_option = None
         st.session_state.question_progress = 0
+        st.session_state.answered = False
+        st.session_state.answer_message = None
 
     # CSVファイルアップロード
     uploaded_file = st.file_uploader("単語データ（CSV形式）をアップロードしてください", type="csv")
@@ -96,12 +107,16 @@ def main():
             if progress['incorrect_words']:
                 st.session_state.review_mode = True
                 st.session_state.question_progress = 0
+                st.session_state.answered = False
+                st.session_state.answer_message = None
             else:
                 st.sidebar.info("不正解の単語がありません。")
 
         if st.sidebar.button("通常モードに戻る"):
             st.session_state.review_mode = False
             st.session_state.question_progress = 0
+            st.session_state.answered = False
+            st.session_state.answer_message = None
 
         # 出題モード選択
         if st.session_state.review_mode:
@@ -115,8 +130,6 @@ def main():
             if st.session_state.question_progress >= len(words_to_study):
                 st.info("すべての単語を学習しました！")
             else:
-                # ランダムに出題するためにリストをシャッフル
-                random.shuffle(words_to_study)
                 current_word = words_to_study[st.session_state.question_progress]
 
                 st.write(f"**英単語:** {current_word['英単語']}")
@@ -132,6 +145,7 @@ def main():
                     audio_html = f"""<audio controls autoplay><source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3"></audio>"""
                     st.markdown(audio_html, unsafe_allow_html=True)
 
+                # 選択肢の生成（未回答時のみ）
                 if not st.session_state.options:
                     options = [current_word['日本語訳']]
                     while len(options) < 4:
@@ -145,15 +159,24 @@ def main():
                     "意味を選んでください", st.session_state.options, key="radio_selection"
                 )
 
-                if st.button("回答する"):
-                    check_answer(current_word)
+                col1, col2 = st.columns([1, 4])
+                
+                with col1:
+                    if st.button("回答する", disabled=st.session_state.answered):
+                        check_answer(current_word)
 
-                # 「次へ」のボタンで進む
-                if st.button("次へ"):
+                # 回答メッセージの表示
+                if st.session_state.answer_message:
+                    if "正解" in st.session_state.answer_message:
+                        st.success(st.session_state.answer_message)
+                    else:
+                        st.error(st.session_state.answer_message)
+
+                # 回答済みの場合のみ「次へ」ボタンを有効化
+                if st.button("次へ", disabled=not st.session_state.answered):
                     next_question()
         else:
             st.info("すべての単語を学習しました！")
 
 if __name__ == "__main__":
     main()
-
