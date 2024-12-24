@@ -41,6 +41,8 @@ if "options" not in st.session_state:
     st.session_state.options = []
 if "review_mode" not in st.session_state:
     st.session_state.review_mode = False
+if "selected_option" not in st.session_state:
+    st.session_state.selected_option = None
 
 # メイン関数
 def main():
@@ -57,6 +59,9 @@ def main():
     if st.sidebar.button("進捗をリセット"):
         progress = {"correct": 0, "incorrect": 0, "incorrect_words": []}
         save_progress(progress)
+        st.session_state.current_word = None
+        st.session_state.options = []
+        st.session_state.selected_option = None
         st.experimental_rerun()
 
     # CSVファイルアップロード
@@ -68,11 +73,13 @@ def main():
         if st.sidebar.button("復習モードを開始"):
             if progress['incorrect_words']:
                 st.session_state.review_mode = True
+                st.session_state.current_word = None  # 新しい問題をセットする
             else:
                 st.sidebar.info("不正解の単語がありません。")
 
         if st.sidebar.button("通常モードに戻る"):
             st.session_state.review_mode = False
+            st.session_state.current_word = None  # 新しい問題をセットする
 
         # 出題モード選択
         if st.session_state.review_mode:
@@ -83,7 +90,7 @@ def main():
 
         # 出題
         if words_to_study:
-            if not st.session_state.current_word or st.session_state.current_word not in words_to_study:
+            if not st.session_state.current_word:
                 st.session_state.current_word = random.choice(words_to_study)
 
             current_word = st.session_state.current_word
@@ -91,7 +98,7 @@ def main():
             st.write(f"**英単語:** {current_word['英単語']}")
             st.write(f"_例文:_ {current_word['例文']}")
 
-            # 音声再生
+            # 音声再生（ボタンを押しても次の問題に進まないようにする）
             if st.button("単語を再生"):
                 audio_base64 = text_to_audio_base64(current_word['英単語'])
                 audio_html = f"""
@@ -120,11 +127,14 @@ def main():
                 random.shuffle(options)
                 st.session_state.options = options
 
-            selected_option = st.radio("意味を選んでください", st.session_state.options)
+            # ラジオボタンで選択
+            st.session_state.selected_option = st.radio(
+                "意味を選んでください", st.session_state.options, key="radio_selection"
+            )
 
             # 回答処理
             if st.button("回答する"):
-                if selected_option == current_word['日本語訳']:
+                if st.session_state.selected_option == current_word['日本語訳']:
                     st.success("正解です！")
                     progress['correct'] += 1
                 else:
@@ -136,6 +146,7 @@ def main():
                 save_progress(progress)
                 st.session_state.current_word = None
                 st.session_state.options = []
+                st.session_state.selected_option = None
                 st.experimental_rerun()
         else:
             st.info("すべての単語を学習しました！")
