@@ -123,6 +123,7 @@ def main():
                 st.write(f"**英単語:** {current_word['英単語']}")
                 st.write(f"_例文:_ {current_word['例文']}")
 
+                # 音声再生ボタン
                 if st.button("単語を再生"):
                     audio_base64 = text_to_audio_base64(current_word['英単語'])
                     audio_html = f"""<audio controls autoplay><source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3"></audio>"""
@@ -146,8 +147,12 @@ def main():
                     "意味を選んでください", st.session_state.options, key="radio_selection"
                 )
 
+                # 回答ボタン
                 if st.button("回答する"):
                     check_answer(current_word)
+
+                # 「次へ」ボタンは回答後に表示する
+                if st.session_state.selected_option is not None:
                     st.button("次へ", on_click=next_question)  # 回答後に次へボタンを表示
 
         else:
