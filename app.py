@@ -1,14 +1,12 @@
 import streamlit as st
 import pandas as pd
 import random
-from gtts import gTTS
+from gTTS import gTTS
 import base64
 import os
 import json
 from PIL import Image
 import io
-import threading
-import time
 
 # スコアと進捗を保存するファイル
 PROGRESS_FILE = "progress.json"
@@ -73,37 +71,6 @@ def check_answer(current_word):
         save_progress(st.session_state.progress)
         st.session_state.answered = True
 
-def start_timer():
-    if "timer_active" not in st.session_state or not st.session_state.timer_active:
-        st.session_state.timer_active = True
-        timer_placeholder = st.empty()
-
-        progress_bar = timer_placeholder.progress(1.0)
-        start_time = time.time()
-        total_time = st.session_state.time_left
-
-        while st.session_state.time_left > 0:
-            elapsed_time = time.time() - start_time
-            st.session_state.time_left = max(0, total_time - int(elapsed_time))
-            progress_value = st.session_state.time_left / total_time
-            progress_bar.progress(progress_value)
-
-            with timer_placeholder.container():
-                st.markdown(f"### ⏳ 残り時間: **{st.session_state.time_left} 秒**")
-            time.sleep(0.1)
-
-            if st.session_state.answered:
-                st.session_state.timer_active = False
-                break
-
-        if st.session_state.time_left == 0 and not st.session_state.answered:
-            st.session_state.answer_message = "時間切れ！次の問題に進みます。"
-            st.session_state.progress['incorrect'] += 1
-            save_progress(st.session_state.progress)
-            next_question()
-        st.session_state.timer_active = False
-        timer_placeholder.empty()
-
 # メイン関数
 def main():
     st.title("英単語学習アプリ")
@@ -130,8 +97,6 @@ def main():
         st.session_state.shuffled_words = None
     if "image_files" not in st.session_state:
         st.session_state.image_files = {}
-    if "time_left" not in st.session_state:
-        st.session_state.time_left = 30
 
     progress = st.session_state.progress
 
@@ -150,7 +115,6 @@ def main():
         st.session_state.answered = False
         st.session_state.answer_message = None
         st.session_state.shuffled_words = None
-        st.session_state.time_left = 30
 
     # CSVファイルとイメージファイルのアップロード
     col1, col2 = st.columns(2)
@@ -158,7 +122,7 @@ def main():
         uploaded_file = st.file_uploader("単語データ（CSV形式）をアップロードしてください", type="csv")
     with col2:
         uploaded_images = st.file_uploader("画像をアップロードしてください", type=None, accept_multiple_files=True)
-        
+
     # 画像ファイルの処理
     if uploaded_images:
         st.session_state.image_files = {}
@@ -168,23 +132,6 @@ def main():
 
     if uploaded_file:
         word_data = load_data(uploaded_file)
-
-        if st.sidebar.button("復習モードを開始"):
-            if progress['incorrect_words']:
-                st.session_state.review_mode = True
-                st.session_state.question_progress = 0
-                st.session_state.answered = False
-                st.session_state.answer_message = None
-                st.session_state.shuffled_words = shuffle_questions(progress['incorrect_words'])
-            else:
-                st.sidebar.info("不正解の単語がありません。")
-
-        if st.sidebar.button("通常モードに戻る"):
-            st.session_state.review_mode = False
-            st.session_state.question_progress = 0
-            st.session_state.answered = False
-            st.session_state.answer_message = None
-            st.session_state.shuffled_words = shuffle_questions(word_data.to_dict(orient="records"))
 
         # 出題モード選択と問題のシャッフル
         if st.session_state.review_mode:
@@ -234,7 +181,7 @@ def main():
                     st.markdown(f'<audio controls autoplay><source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3"></audio>', unsafe_allow_html=True)
 
                 # 選択肢の表示と回答ボタン
-                selected_option = st.radio("意味を選んでください", options, index=-1)
+                selected_option = st.radio("意味を選んでください", options)
                 st.session_state.selected_option = selected_option
 
                 if st.button("回答する"):
@@ -243,12 +190,10 @@ def main():
                 if st.session_state.answer_message:
                     st.write(st.session_state.answer_message)
 
-                # タイマー開始
-                start_timer()
-
                 # 次へボタン
                 if st.button("次へ"):
                     next_question()
 
 if __name__ == "__main__":
     main()
+
