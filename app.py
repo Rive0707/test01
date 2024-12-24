@@ -23,16 +23,27 @@ def save_progress(progress):
 
 # 音声生成関数
 def text_to_audio_base64(text, lang="en"):
-    tts = gTTS(text=text, lang=lang)
-    with open("temp.mp3", "wb") as f:
-        tts.write_to_fp(f)
-    with open("temp.mp3", "rb") as f:
-        audio_data = f.read()
-    return base64.b64encode(audio_data).decode()
+    try:
+        tts = gTTS(text=text, lang=lang)
+        with open("temp.mp3", "wb") as f:
+            tts.write_to_fp(f)
+        with open("temp.mp3", "rb") as f:
+            audio_data = f.read()
+        return base64.b64encode(audio_data).decode()
+    except Exception as e:
+        st.error(f"音声生成エラー: {e}")
+        return None
 
 # CSVデータをロード
 def load_data(file_path):
-    return pd.read_csv(file_path)
+    try:
+        return pd.read_csv(file_path)
+    except pd.errors.ParserError as e:
+        st.error(f"CSVファイルの解析エラー: {e}. ファイル形式を確認してください。(例: 区切り文字はカンマか)")
+        return None
+    except FileNotFoundError:
+        st.error(f"ファイルが見つかりません。")
+        return None
 
 # 回答ボタンのコールバック関数
 def check_answer(current_word):
@@ -42,28 +53,29 @@ def check_answer(current_word):
     else:
         st.error(f"不正解！正解は: {current_word['日本語訳']}")
         st.session_state.progress['incorrect'] += 1
-    if current_word not in st.session_state.progress['incorrect_words']:
-        st.session_state.progress['incorrect_words'].append(current_word)
+        if current_word not in st.session_state.progress['incorrect_words']:
+            st.session_state.progress['incorrect_words'].append(current_word)
     save_progress(st.session_state.progress)
 
-# メイン関数
 def main():
     st.title("英単語学習アプリ")
     st.subheader("英単語を楽しく学習しよう！")
 
-    # セッション状態初期化 (progress をセッションステートに移動)
+    # セッション状態初期化
     if "progress" not in st.session_state:
         st.session_state.progress = load_progress()
-    if "current_word" not in st.session_state:
-        st.session_state.current_word = None
     if "options" not in st.session_state:
         st.session_state.options = []
     if "review_mode" not in st.session_state:
         st.session_state.review_mode = False
+    if "studied_words" not in st.session_state:
+        st.session_state.studied_words = []
     if "selected_option" not in st.session_state:
         st.session_state.selected_option = None
+    if "current_word" not in st.session_state:
+        st.session_state.current_word = None
 
-    progress = st.session_state.progress  # セッションステートから取得
+    progress = st.session_state.progress
 
     # サイドバー: スコア表示と設定
     st.sidebar.markdown("### スコア")
@@ -73,57 +85,85 @@ def main():
     if st.sidebar.button("進捗をリセット"):
         st.session_state.progress = {"correct": 0, "incorrect": 0, "incorrect_words": []}
         save_progress(st.session_state.progress)
-        st.session_state.current_word = None
+        st.session_state.studied_words = []
         st.session_state.options = []
         st.session_state.selected_option = None
+        st.session_state.current_word = None
 
     # CSVファイルアップロード
     uploaded_file = st.file_uploader("単語データ（CSV形式）をアップロードしてください", type="csv")
 
     if uploaded_file:
         word_data = load_data(uploaded_file)
+        if word_data is None:
+            return
 
-        # 復習モードを開始
+        all_words = word_data.to_dict(orient="records")
+
         if st.sidebar.button("復習モードを開始"):
             if progress['incorrect_words']:
                 st.session_state.review_mode = True
+                st.session_state.studied_words = []
             else:
                 st.sidebar.info("不正解の単語がありません。")
 
-        # 通常モードに戻る
         if st.sidebar.button("通常モードに戻る"):
             st.session_state.review_mode = False
+            st.session_state.studied_words = []
 
         # 出題モード選択
         if st.session_state.review_mode:
-            words_to_study = [word for word in progress['incorrect_words'] if word]
+            words_to_study = progress['incorrect_words'].copy()
+            if not words_to_study:
+                st.info("復習する単語がありません")
+                return
+            random.shuffle(words_to_study)
             st.info("復習モードで学習中です。")
         else:
-            words_to_study = word_data.to_dict(orient="records")
+            words_to_study = all_words.copy()
+            random.shuffle(words_to_study)
 
-        # ランダムに単語を出題
+        # 出題
         if words_to_study:
-            current_word = random.choice(words_to_study)
+            available_words = [word for word in words_to_study if word not in st.session_state.studied_words]
+
+            if not available_words:
+                st.info("すべての単語を学習しました！")
+                st.session_state.studied_words = []
+                st.session_state.options = []
+                st.session_state.current_word = None
+                return
+
+            current_word = random.choice(available_words)
+            st.session_state.studied_words.append(current_word)
+            st.session_state.current_word = current_word
 
             st.write(f"**英単語:** {current_word['英単語']}")
             st.write(f"_例文:_ {current_word['例文']}")
 
             if st.button("単語を再生"):
                 audio_base64 = text_to_audio_base64(current_word['英単語'])
-                audio_html = f"""<audio controls autoplay><source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3"></audio>"""
-                st.markdown(audio_html, unsafe_allow_html=True)
+                if audio_base64:
+                    audio_html = f"""<audio controls autoplay><source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3"></audio>"""
+                    st.markdown(audio_html, unsafe_allow_html=True)
 
             if st.button("例文を再生"):
                 audio_base64 = text_to_audio_base64(current_word['例文'])
-                audio_html = f"""<audio controls autoplay><source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3"></audio>"""
-                st.markdown(audio_html, unsafe_allow_html=True)
+                if audio_base64:
+                    audio_html = f"""<audio controls autoplay><source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3"></audio>"""
+                    st.markdown(audio_html, unsafe_allow_html=True)
 
             if not st.session_state.options:
                 options = [current_word['日本語訳']]
                 while len(options) < 4:
-                    option = random.choice(word_data['日本語訳'])
-                    if option not in options:
-                        options.append(option)
+                    try:
+                        option = random.choice(word_data['日本語訳'])
+                        if option not in options:
+                            options.append(option)
+                    except KeyError:
+                        st.error("CSVファイルに「日本語訳」列が存在しません。")
+                        return
+
                 random.shuffle(options)
                 st.session_state.options = options
 
@@ -133,16 +173,11 @@ def main():
 
             if st.button("回答する"):
                 check_answer(current_word)
+                st.session_state.options = []
+                st.session_state.selected_option = None
 
-            # 次の問題に進むボタン
-            if st.button("次へ"):
-                st.session_state.options = []  # 選択肢をリセット
-                st.session_state.selected_option = None  # 選択肢をリセット
-                st.experimental_rerun()  # 画面をリロードして新しい問題を表示
-
-        else:
-            st.info("すべての単語を学習しました！")
+    else:
+        st.info("CSVファイルをアップロードしてください。")
 
 if __name__ == "__main__":
     main()
-
