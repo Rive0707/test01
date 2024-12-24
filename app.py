@@ -13,13 +13,17 @@ PROGRESS_FILE = "progress.json"
 def load_progress():
     if os.path.exists(PROGRESS_FILE):
         with open(PROGRESS_FILE, "r") as f:
-            return json.load(f)
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                st.warning("進捗ファイルの読み込みに失敗しました。新しいファイルを作成します。")
+                return {"correct": 0, "incorrect": 0, "incorrect_words": []}
     else:
         return {"correct": 0, "incorrect": 0, "incorrect_words": []}
 
 def save_progress(progress):
     with open(PROGRESS_FILE, "w") as f:
-        json.dump(progress, f)
+        json.dump(progress, f, ensure_ascii=False)
 
 # 音声生成関数
 def text_to_audio_base64(text, lang="en"):
@@ -37,12 +41,20 @@ def text_to_audio_base64(text, lang="en"):
 # CSVデータをロード
 def load_data(file_path):
     try:
-        return pd.read_csv(file_path)
+        df = pd.read_csv(file_path)
+        df = df.dropna(subset=['英単語', '日本語訳', '例文'])
+        if df.empty:
+            st.error("CSVファイルが空です。")
+            return None
+        return df
     except pd.errors.ParserError as e:
         st.error(f"CSVファイルの解析エラー: {e}. ファイル形式を確認してください。(例: 区切り文字はカンマか)")
         return None
     except FileNotFoundError:
         st.error(f"ファイルが見つかりません。")
+        return None
+    except KeyError as e:
+        st.error(f"CSVファイルに必要な列({e})が存在しません。'英単語'、'日本語訳'、'例文'列が必要です。")
         return None
 
 # 回答ボタンのコールバック関数
@@ -61,7 +73,6 @@ def main():
     st.title("英単語学習アプリ")
     st.subheader("英単語を楽しく学習しよう！")
 
-    # セッション状態初期化
     if "progress" not in st.session_state:
         st.session_state.progress = load_progress()
     if "options" not in st.session_state:
@@ -77,7 +88,6 @@ def main():
 
     progress = st.session_state.progress
 
-    # サイドバー: スコア表示と設定
     st.sidebar.markdown("### スコア")
     st.sidebar.write(f"**正解数:** {progress['correct']}")
     st.sidebar.write(f"**不正解数:** {progress['incorrect']}")
@@ -90,7 +100,6 @@ def main():
         st.session_state.selected_option = None
         st.session_state.current_word = None
 
-    # CSVファイルアップロード
     uploaded_file = st.file_uploader("単語データ（CSV形式）をアップロードしてください", type="csv")
 
     if uploaded_file:
@@ -111,7 +120,6 @@ def main():
             st.session_state.review_mode = False
             st.session_state.studied_words = []
 
-        # 出題モード選択
         if st.session_state.review_mode:
             words_to_study = progress['incorrect_words'].copy()
             if not words_to_study:
@@ -123,7 +131,6 @@ def main():
             words_to_study = all_words.copy()
             random.shuffle(words_to_study)
 
-        # 出題
         if words_to_study:
             available_words = [word for word in words_to_study if word not in st.session_state.studied_words]
 
