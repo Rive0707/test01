@@ -83,6 +83,17 @@ def timer_callback():
             st.session_state.progress['incorrect'] += 1
             next_question()
 
+# タイマーを別スレッドで実行する
+def start_timer():
+    while st.session_state.time_left > 0 and not st.session_state.answered:
+        time.sleep(1)  # 1秒ごとに減らす
+        timer_callback()
+
+# メイン関数内でのタイマー開始
+if not st.session_state.answered:
+    threading.Thread(target=start_timer, daemon=True).start()
+
+
 # メイン関数
 def main():
     st.title("英単語学習アプリ")
