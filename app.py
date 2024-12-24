@@ -205,7 +205,7 @@ def main():
                         image_data = st.session_state.image_files[current_word['英単語']]
                         image = load_image(image_data)
                         if image:
-                            st.image(image, use_column_width=True)
+                            st.image(image, use_container_width=True)
 
                 if st.button("単語を再生"):
                     audio_base64 = text_to_audio_base64(current_word['英単語'])
