@@ -27,16 +27,12 @@ def save_progress(progress):
 
 # 音声生成関数
 def text_to_audio_base64(text, lang="en"):
-    try:
-        tts = gTTS(text=text, lang=lang)
-        with open("temp.mp3", "wb") as f:
-            tts.write_to_fp(f)
-        with open("temp.mp3", "rb") as f:
-            audio_data = f.read()
-        return base64.b64encode(audio_data).decode()
-    except Exception as e:
-        st.error(f"音声生成エラー: {e}")
-        return None
+    tts = gTTS(text=text, lang=lang)
+    with open("temp.mp3", "wb") as f:
+        tts.write_to_fp(f)
+    with open("temp.mp3", "rb") as f:
+        audio_data = f.read()
+    return base64.b64encode(audio_data).decode()
 
 # CSVデータをロード
 def load_data(file_path):
@@ -47,14 +43,8 @@ def load_data(file_path):
             st.error("CSVファイルが空です。")
             return None
         return df
-    except pd.errors.ParserError as e:
-        st.error(f"CSVファイルの解析エラー: {e}. ファイル形式を確認してください。(例: 区切り文字はカンマか)")
-        return None
-    except FileNotFoundError:
-        st.error(f"ファイルが見つかりません。")
-        return None
-    except KeyError as e:
-        st.error(f"CSVファイルに必要な列({e})が存在しません。'英単語'、'日本語訳'、'例文'列が必要です。")
+    except (pd.errors.ParserError, FileNotFoundError, KeyError) as e:
+        st.error(f"エラー: {e}")
         return None
 
 # 回答ボタンのコールバック関数
@@ -69,22 +59,23 @@ def check_answer(current_word):
             st.session_state.progress['incorrect_words'].append(current_word)
     save_progress(st.session_state.progress)
 
+# メイン関数
 def main():
     st.title("英単語学習アプリ")
     st.subheader("英単語を楽しく学習しよう！")
 
     if "progress" not in st.session_state:
         st.session_state.progress = load_progress()
+    if "current_word" not in st.session_state:
+        st.session_state.current_word = None
     if "options" not in st.session_state:
         st.session_state.options = []
     if "review_mode" not in st.session_state:
         st.session_state.review_mode = False
-    if "studied_words" not in st.session_state:
+    if "studied_words" not in st.session_state:  # 出題済み単語リスト
         st.session_state.studied_words = []
     if "selected_option" not in st.session_state:
         st.session_state.selected_option = None
-    if "current_word" not in st.session_state:
-        st.session_state.current_word = None
 
     progress = st.session_state.progress
 
@@ -95,10 +86,10 @@ def main():
     if st.sidebar.button("進捗をリセット"):
         st.session_state.progress = {"correct": 0, "incorrect": 0, "incorrect_words": []}
         save_progress(st.session_state.progress)
-        st.session_state.studied_words = []
+        st.session_state.current_word = None
         st.session_state.options = []
         st.session_state.selected_option = None
-        st.session_state.current_word = None
+        st.session_state.studied_words = []
 
     uploaded_file = st.file_uploader("単語データ（CSV形式）をアップロードしてください", type="csv")
 
@@ -133,16 +124,16 @@ def main():
 
         if words_to_study:
             available_words = [word for word in words_to_study if word not in st.session_state.studied_words]
-
             if not available_words:
                 st.info("すべての単語を学習しました！")
-                st.session_state.studied_words = []
+                st.session_state.studied_words = []  # 出題済みリストをリセット
                 st.session_state.options = []
                 st.session_state.selected_option = None
+                st.session_state.current_word = None
                 return
 
-            current_word = random.choice(available_words)
-            st.session_state.studied_words.append(current_word)
+            current_word = random.choice(available_words)  # ランダムに単語を選択
+            st.session_state.studied_words.append(current_word) # 出題済みリストに追加
             st.session_state.current_word = current_word
 
             st.write(f"**英単語:** {current_word['英単語']}")
@@ -183,8 +174,8 @@ def main():
                 st.session_state.options = []
                 st.session_state.selected_option = None
 
-        else:
-            st.info("CSVファイルをアップロードしてください。")
+    else:
+        st.info("CSVファイルをアップロードしてください。")
 
 if __name__ == "__main__":
     main()
