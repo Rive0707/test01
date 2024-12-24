@@ -147,11 +147,12 @@ def main():
 
                 if st.button("回答する"):
                     check_answer(current_word)
-                    st.button("次へ", on_click=next_question)  # 回答後に次へボタンを表示
 
+                # 「次へ」のボタンで進む
+                if st.button("次へ"):
+                    next_question()
         else:
             st.info("すべての単語を学習しました！")
 
 if __name__ == "__main__":
     main()
-
