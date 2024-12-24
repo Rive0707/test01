@@ -151,10 +151,12 @@ def main():
 
                     # 「次へ」ボタンを表示
                     if st.button("次へ"):
+                        # 問題を進める
                         st.session_state.question_progress += 1
                         st.session_state.options = []  # 選択肢をリセット
                         st.session_state.selected_option = None  # 選択肢をリセット
-                        st.experimental_rerun()  # 再描画して状態を更新
+                        # 再描画をせずに進行状況を即反映
+                        st.experimental_rerun()  # 進行状況を反映して画面を更新
 
         else:
             st.info("すべての単語を学習しました！")
