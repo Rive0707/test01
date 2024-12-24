@@ -1,7 +1,7 @@
 import streamlit as st
-import random
 import pandas as pd
-from gTTS import gTTS
+import random
+from gtts import gTTS
 import base64
 import os
 import json
@@ -77,17 +77,13 @@ def main():
 
         # 単語をランダムに選ぶ
         if words_to_study:
-            if "current_word" not in st.session_state:
-                st.session_state.current_word = random.choice(words_to_study)
-
-            current_word = st.session_state.current_word
+            current_word = random.choice(words_to_study)
 
             st.write(f"**英単語:** {current_word['英単語']}")
             st.write(f"_例文:_ {current_word['例文']}")
 
             # 音声再生
-            play_word_button = st.button("単語を再生")
-            if play_word_button:
+            if st.button("単語を再生"):
                 audio_base64 = text_to_audio_base64(current_word['英単語'])
                 audio_html = f"""
                     <audio controls autoplay>
@@ -96,8 +92,7 @@ def main():
                 """
                 st.markdown(audio_html, unsafe_allow_html=True)
 
-            play_example_button = st.button("例文を再生")
-            if play_example_button:
+            if st.button("例文を再生"):
                 audio_base64 = text_to_audio_base64(current_word['例文'])
                 audio_html = f"""
                     <audio controls autoplay>
@@ -114,42 +109,22 @@ def main():
                     options.append(option)
             random.shuffle(options)
 
-            # 初期選択肢を保持
-            if "selected_option" not in st.session_state:
-                st.session_state.selected_option = None
-
-            # ラジオボタンのインデックスを選択された選択肢に設定
-            selected_option = st.radio(
-                "意味を選んでください", 
-                options, 
-                index=options.index(st.session_state.selected_option) if st.session_state.selected_option else None
-            )
-
-            # 選択肢が変更された場合にその選択肢を保存
-            if selected_option != st.session_state.selected_option:
-                st.session_state.selected_option = selected_option
-
-            # 「回答する」ボタンが押されたときの処理
+            # 回答ボタン
+            selected_option = st.radio("意味を選んでください", options)
             if st.button("回答する"):
-                if st.session_state.selected_option:
-                    if st.session_state.selected_option == current_word['日本語訳']:
-                        st.success("正解です！")
-                        progress['correct'] += 1
-                    else:
-                        st.error(f"不正解！正解は: {current_word['日本語訳']}")
-                        progress['incorrect'] += 1
-                        progress['incorrect_words'].append(current_word)
-
-                    save_progress(progress)
-                    # 次の問題に進むために、現在の問題を削除して、進めるようにする
-                    del st.session_state.current_word
-                    st.session_state.selected_option = None  # 選択肢をリセット
-                    st.experimental_rerun()  # 回答後、問題を次に進める
+                if selected_option == current_word['日本語訳']:
+                    st.success("正解です！")
+                    progress['correct'] += 1
                 else:
-                    st.warning("答えを選んでから回答してください。")
+                    st.error(f"不正解！正解は: {current_word['日本語訳']}")
+                    progress['incorrect'] += 1
+                    progress['incorrect_words'].append(current_word)
 
+                save_progress(progress)
+                st.experimental_rerun()
         else:
             st.info("すべての単語を学習しました！")
 
 if __name__ == "__main__":
     main()
+
