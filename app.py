@@ -75,22 +75,30 @@ def check_answer(current_word):
         st.session_state.answered = True
 
 
-# タイマーの設定と実行
+
+
+
+# タイマーを開始する関数
 def start_timer():
-    if "timer_active" not in st.session_state or not st.session_state.timer_active:
+    if "timer_active" not in st.session_state:
+        st.session_state.timer_active = False
+    if "time_left" not in st.session_state:
+        st.session_state.time_left = 30  # 初期時間
+    if "answered" not in st.session_state:
+        st.session_state.answered = False
+
+    if not st.session_state.timer_active:
         st.session_state.timer_active = True
-        timer_placeholder = st.empty()  # タイマー表示用のプレースホルダー
         total_time = st.session_state.time_left
+        timer_placeholder = st.empty()  # タイマー表示用のプレースホルダー
 
         # カウントダウンタイマーを実行
         for secs in range(total_time, 0, -1):
-            if st.session_state.answered:  # ユーザーが回答した場合、タイマーを停止
+            if st.session_state.answered:
                 st.session_state.timer_active = False
                 break
 
-            # 残り時間を分と秒に分ける
             mm, ss = divmod(secs, 60)
-            # タイマーを表示
             timer_placeholder.metric("残り時間", f"{mm:02d}:{ss:02d}")
             st.session_state.time_left = secs  # 残り時間をセッションに保存
 
@@ -105,6 +113,16 @@ def start_timer():
 
         st.session_state.timer_active = False
         timer_placeholder.empty()  # タイマー表示をクリア
+
+# セッション状態の初期化
+if "time_left" not in st.session_state:
+    st.session_state.time_left = 30  # 例: 30秒間
+
+# タイマーを別スレッドで開始する
+if "timer_thread" not in st.session_state:
+    timer_thread = threading.Thread(target=start_timer)
+    timer_thread.start()
+    st.session_state.timer_thread = timer_thread
 
 
 
