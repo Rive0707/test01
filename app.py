@@ -8,8 +8,6 @@ import json
 from PIL import Image
 import io
 import threading
-import time
-
 
 # スコアと進捗を保存するファイル
 PROGRESS_FILE = "progress.json"
@@ -74,63 +72,16 @@ def check_answer(current_word):
         save_progress(st.session_state.progress)
         st.session_state.answered = True
 
-import time
+# タイマー処理
+def timer_callback():
+    if st.session_state.time_left > 0:
+        st.session_state.time_left -= 1
+        st.write(f"残り時間: {st.session_state.time_left} 秒")
 
-# タイマーを開始する関数
-def start_timer():
-    if "timer_active" not in st.session_state or not st.session_state.timer_active:
-        st.session_state.timer_active = True
-        timer_placeholder = st.empty()  # タイマー表示用のプレースホルダー
-        total_time = st.session_state.time_left
-
-        # カウントダウンタイマーを実行
-        for secs in range(total_time, 0, -1):
-            mm, ss = secs // 60, secs % 60
-            timer_placeholder.metric("残り時間", f"{mm:02d}:{ss:02d}")
-            st.session_state.time_left = secs  # 残り時間をセッションに保存
-
-            time.sleep(1)  # 1秒ごとに更新
-
-            # ユーザーが回答した場合、タイマーを停止
-            if st.session_state.answered:
-                st.session_state.timer_active = False
-                break
-
-        # 時間切れの処理
         if st.session_state.time_left == 0 and not st.session_state.answered:
             st.session_state.answer_message = "時間切れ！次の問題に進みます。"
             st.session_state.progress['incorrect'] += 1
-            save_progress(st.session_state.progress)
-            next_question()  # 次の問題に進む
-
-        st.session_state.timer_active = False
-        timer_placeholder.empty()  # タイマー表示をクリア
-
-
-
-
-        # 時間切れの場合の処理
-        if st.session_state.time_left == 0 and not st.session_state.answered:
-            st.session_state.answer_message = "時間切れ！次の問題に進みます。"
-            st.session_state.progress['incorrect'] += 1
-            save_progress(st.session_state.progress)
-            next_question()  # 次の問題に進む
-
-        st.session_state.timer_active = False
-        timer_placeholder.empty()  # タイマー表示をクリア
-
-
-
-        # 時間切れの場合の処理
-        if st.session_state.time_left == 0 and not st.session_state.answered:
-            st.session_state.answer_message = "時間切れ！次の問題に進みます。"
-            st.session_state.progress['incorrect'] += 1
-            save_progress(st.session_state.progress)
-            next_question()  # 次の問題へ進む
-
-        st.session_state.timer_active = False
-        timer_placeholder.empty()  # タイマー表示をクリア
-
+            next_question()
 
 # メイン関数
 def main():
@@ -294,10 +245,8 @@ def main():
                 st.warning(f"残り時間: {st.session_state.time_left} 秒", icon="⏳")
 
                 # タイマーの開始
-                if not st.session_state.answered and "timer_thread" not in st.session_state:
-                    timer_thread = threading.Thread(target=start_timer)
-                    timer_thread.start()
-                    st.session_state.timer_thread = timer_thread
+                if not st.session_state.answered:
+                    st.interval(1, timer_callback)
 
                 # 回答済みの場合のみ「次へ」ボタンを有効化
                 if st.button("次へ", disabled=not st.session_state.answered):
