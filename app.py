@@ -77,26 +77,23 @@ def start_timer():
     if "timer_active" not in st.session_state or not st.session_state.timer_active:
         st.session_state.timer_active = True
         timer_placeholder = st.empty()  # タイマー表示用のプレースホルダー
-
-        progress_bar = timer_placeholder.progress(1.0)  # 初期状態で進行状況バーをセット
-        start_time = time.time()
         total_time = st.session_state.time_left
 
-        # 残り時間が0になるまで1秒ごとにカウントダウン
-        while st.session_state.time_left > 0:
-            elapsed_time = time.time() - start_time
-            st.session_state.time_left = max(0, total_time - int(elapsed_time))  # 残り時間の計算
-            progress_value = st.session_state.time_left / total_time  # 残り時間に基づく進行状況
+        # タイマーを1秒ごとに減らしていく
+        for remaining_time in range(total_time, 0, -1):
+            st.session_state.time_left = remaining_time  # 残り時間をセッションに保存
+            progress_value = remaining_time / total_time  # 進行状況バーの値
 
             # 進行状況バーを更新
-            progress_bar.progress(progress_value)
+            timer_placeholder.progress(progress_value)
 
             # 残り時間を表示
             with timer_placeholder.container():
-                st.markdown(f"### ⏳ 残り時間: **{st.session_state.time_left} 秒**")
+                st.markdown(f"### ⏳ 残り時間: **{remaining_time} 秒**")
             
             time.sleep(1)  # 1秒ごとに更新
 
+            # ユーザーが回答したらタイマーを止める
             if st.session_state.answered:
                 st.session_state.timer_active = False
                 break
@@ -110,6 +107,7 @@ def start_timer():
 
         st.session_state.timer_active = False
         timer_placeholder.empty()  # タイマー表示をクリア
+
 
 
         # 時間切れの場合の処理
