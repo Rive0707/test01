@@ -7,7 +7,8 @@ import os
 import json
 from PIL import Image
 import io
-import zipfile
+import threading
+import time
 
 # スコアと進捗を保存するファイル
 PROGRESS_FILE = "progress.json"
@@ -37,27 +38,6 @@ def text_to_audio_base64(text, lang="en"):
 def load_data(file_path):
     return pd.read_csv(file_path)
 
-# ZIPファイルから画像を読み込む
-def load_images_from_zip(zip_file):
-    images = {}
-    with zipfile.ZipFile(zip_file) as z:
-        for filename in z.namelist():
-            if not filename.endswith('/'):  # ディレクトリは除外
-                # ファイル名から拡張子と階層を除去
-                base_name = os.path.splitext(os.path.basename(filename))[0]
-                try:
-                    with z.open(filename) as f:
-                        image_data = f.read()
-                        # 画像として開けるかテスト
-                        try:
-                            Image.open(io.BytesIO(image_data))
-                            images[base_name] = image_data
-                        except:
-                            continue
-                except:
-                    continue
-    return images
-
 # 画像をロード
 def load_image(image_bytes):
     try:
@@ -69,6 +49,40 @@ def load_image(image_bytes):
 def shuffle_questions(words):
     return random.sample(words, len(words))
 
+# タイマーを管理するクラス
+class Timer:
+    def __init__(self, duration, timeout_callback):
+        self.duration = duration
+        self.timeout_callback = timeout_callback
+        self.thread = None
+        self.running = False
+
+    def start(self):
+        self.running = True
+        self.thread = threading.Thread(target=self.run)
+        self.thread.start()
+
+    def stop(self):
+        self.running = False
+        if self.thread:
+            self.thread.join()
+
+    def run(self):
+        time.sleep(self.duration)
+        if self.running:
+            self.timeout_callback()
+
+# タイムアウト時の処理
+def timeout():
+    if not st.session_state.answered:
+        st.session_state.answer_message = "時間切れ！不正解です。"
+        st.session_state.progress['incorrect'] += 1
+        current_word = st.session_state.shuffled_words[st.session_state.question_progress]
+        if current_word not in st.session_state.progress['incorrect_words']:
+            st.session_state.progress['incorrect_words'].append(current_word)
+        save_progress(st.session_state.progress)
+        st.session_state.answered = True
+
 # 次へボタンのコールバック関数
 def next_question():
     if st.session_state.answered:  # 回答済みの場合のみ次の問題へ
@@ -77,6 +91,8 @@ def next_question():
         st.session_state.selected_option = None  # 選択肢をリセット
         st.session_state.answered = False  # 回答状態をリセット
         st.session_state.answer_message = None  # 回答メッセージをリセット
+        st.session_state.timer.stop()  # タイマー停止
+        st.session_state.timer.start()  # 次の問題用のタイマー開始
 
 # 回答ボタンのコールバック関数
 def check_answer(current_word):
@@ -87,9 +103,11 @@ def check_answer(current_word):
         else:
             st.session_state.answer_message = f"不正解！正解は: {current_word['日本語訳']}"
             st.session_state.progress['incorrect'] += 1
-            st.session_state.incorrect_word = current_word  # 不正解の単語を記憶
+            if current_word not in st.session_state.progress['incorrect_words']:
+                st.session_state.progress['incorrect_words'].append(current_word)
         save_progress(st.session_state.progress)
         st.session_state.answered = True
+        st.session_state.timer.stop()  # 回答したらタイマーを停止
 
 # メイン関数
 def main():
@@ -115,8 +133,9 @@ def main():
         st.session_state.answer_message = None
     if "shuffled_words" not in st.session_state:
         st.session_state.shuffled_words = None
-    if "image_files" not in st.session_state:
-        st.session_state.image_files = {}
+    if "timer" not in st.session_state:
+        st.session_state.timer = Timer(30, timeout)
+        st.session_state.timer.start()
 
     progress = st.session_state.progress
 
@@ -135,145 +154,68 @@ def main():
         st.session_state.answered = False
         st.session_state.answer_message = None
         st.session_state.shuffled_words = None
+        st.session_state.timer.stop()
+        st.session_state.timer.start()
 
-    # CSVファイルとZIPファイルのアップロード
-    col1, col2 = st.columns(2)
-    with col1:
-        uploaded_file = st.file_uploader("単語データ（CSV形式）をアップロードしてください", type="csv")
-    with col2:
-        uploaded_zip = st.file_uploader("画像フォルダ（ZIP形式）をアップロードしてください", type="zip")
-        
-    # ZIPファイルの処理
-    if uploaded_zip:
-        st.session_state.image_files = load_images_from_zip(uploaded_zip)
-        st.success(f"{len(st.session_state.image_files)}個の画像を読み込みました。")
+    # CSVファイルのアップロード
+    uploaded_file = st.file_uploader("単語データ（CSV形式）をアップロードしてください", type="csv")
 
     if uploaded_file:
         word_data = load_data(uploaded_file)
-
-        if st.sidebar.button("復習モードを開始"):
-            if progress['incorrect_words']:
-                st.session_state.review_mode = True
-                st.session_state.question_progress = 0
-                st.session_state.answered = False
-                st.session_state.answer_message = None
-                st.session_state.shuffled_words = shuffle_questions(progress['incorrect_words'])
-            else:
-                st.sidebar.info("不正解の単語がありません。")
-
-        if st.sidebar.button("通常モードに戻る"):
-            st.session_state.review_mode = False
-            st.session_state.question_progress = 0
-            st.session_state.answered = False
-            st.session_state.answer_message = None
+        if not st.session_state.shuffled_words:
             st.session_state.shuffled_words = shuffle_questions(word_data.to_dict(orient="records"))
 
-        # 出題モード選択と問題のシャッフル
-        if st.session_state.review_mode:
-            if not st.session_state.shuffled_words:
-                st.session_state.shuffled_words = shuffle_questions([word for word in progress['incorrect_words'] if word])
-            words_to_study = st.session_state.shuffled_words
-            st.info("復習モードで学習中です。")
-        else:
-            if not st.session_state.shuffled_words:
-                st.session_state.shuffled_words = shuffle_questions(word_data.to_dict(orient="records"))
-            words_to_study = st.session_state.shuffled_words
-
         # 出題
-        if words_to_study:
-            if st.session_state.question_progress >= len(words_to_study):
-                st.info("すべての単語を学習しました！")
-                if st.button("最初からやり直す"):
-                    st.session_state.question_progress = 0
-                    st.session_state.shuffled_words = shuffle_questions(words_to_study)
-                    st.session_state.answered = False
-                    st.session_state.answer_message = None
-                    st.session_state.options = []
-            else:
-                current_word = words_to_study[st.session_state.question_progress]
+        words_to_study = st.session_state.shuffled_words
 
-                # 英単語と画像を横に並べて表示
-                col1, col2 = st.columns([2, 1])
-                with col1:
-                    st.write(f"**英単語:** {current_word['英単語']}")
-                    # 例文の単語を赤文字で表示
-                    example_sentence = current_word['例文']
-                    highlighted_sentence = []
-                    for word in example_sentence.split():
-                        highlighted_sentence.append(f"<span style='color:red'>{word}</span>")
-                    highlighted_sentence = " ".join(highlighted_sentence)
-                    st.write(f"_例文:_ {highlighted_sentence}", unsafe_allow_html=True)
-
-                with col2:
-                    # 対応する画像があれば表示
-                    if current_word['英単語'] in st.session_state.image_files:
-                        image_data = st.session_state.image_files[current_word['英単語']]
-                        image = load_image(image_data)
-                        if image:
-                            st.image(image, use_container_width=True)
-
-                if st.button("単語を再生"):
-                    audio_base64 = text_to_audio_base64(current_word['英単語'])
-                    audio_html = f"""<audio controls autoplay><source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3"></audio>"""
-                    st.markdown(audio_html, unsafe_allow_html=True)
-
-                if st.button("例文を再生"):
-                    audio_base64 = text_to_audio_base64(current_word['例文'])
-                    audio_html = f"""<audio controls autoplay><source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3"></audio>"""
-                    st.markdown(audio_html, unsafe_allow_html=True)
-
-                # 選択肢の生成（未回答時のみ）
-                if not st.session_state.options:
-                    options = [current_word['日本語訳']]
-                    all_answers = word_data['日本語訳'].tolist()
-                    wrong_answers = [ans for ans in all_answers if ans != current_word['日本語訳']]
-                    options.extend(random.sample(wrong_answers, 3))
-                    random.shuffle(options)
-                    st.session_state.options = options
-
-                st.session_state.selected_option = st.radio(
-                    "意味を選んでください", st.session_state.options, key="radio_selection"
-                )
-
-                col1, col2 = st.columns([1, 4])
-                
-                with col1:
-                    # 回答までの制限時間を設定
-                    timer = st.session_state.timer = st.slider(
-                        "制限時間 (秒)",
-                        min_value=0,
-                        max_value=30,
-                        value=30,
-                        step=1,
-                        key="timer_selection"
-                    )
-
-                    if st.button("回答する", disabled=st.session_state.answered):
-                        if timer > 0:
-                            st.session_state.timer -= 1  # 時間カウントダウン
-                        if st.session_state.timer == 0:
-                            st.session_state.answer_message = f"時間切れ！正解は: {current_word['日本語訳']}"
-                            st.session_state.progress['incorrect'] += 1
-                            st.session_state.incorrect_word = current_word  # 不正解の単語を記憶
-                            st.session_state.answered = True
-                            save_progress(st.session_state.progress)
-                        else:
-                            check_answer(current_word)
-
-                # 回答後、時間切れの場合を処理
-                if st.session_state.answer_message:
-                    if "時間切れ" in st.session_state.answer_message:
-                        st.error(st.session_state.answer_message)
-                    elif "不正解" in st.session_state.answer_message:
-                        st.error(st.session_state.answer_message)
-                    else:
-                        st.success(st.session_state.answer_message)
-
-                # 回答済みの場合のみ「次へ」ボタンを有効化
-                if st.session_state.answered:
-                    next_question()
-        else:
+        if st.session_state.question_progress >= len(words_to_study):
             st.info("すべての単語を学習しました！")
+            if st.button("最初からやり直す"):
+                st.session_state.question_progress = 0
+                st.session_state.shuffled_words = shuffle_questions(words_to_study)
+                st.session_state.answered = False
+                st.session_state.answer_message = None
+                st.session_state.options = []
+                st.session_state.timer.stop()
+                st.session_state.timer.start()
+        else:
+            current_word = words_to_study[st.session_state.question_progress]
+
+            # 英単語と例文を表示
+            st.write(f"**英単語:** {current_word['英単語']}")
+            example_with_highlight = current_word['例文'].replace(current_word['英単語'], f"<span style='color:red;'>{current_word['英単語']}</span>")
+            st.markdown(f"_例文:_ {example_with_highlight}", unsafe_allow_html=True)
+
+            # 選択肢の生成（未回答時のみ）
+            if not st.session_state.options:
+                options = [current_word['日本語訳']]
+                all_answers = word_data['日本語訳'].tolist()
+                wrong_answers = [ans for ans in all_answers if ans != current_word['日本語訳']]
+                options.extend(random.sample(wrong_answers, 3))
+                random.shuffle(options)
+                st.session_state.options = options
+
+            st.session_state.selected_option = st.radio(
+                "意味を選んでください", st.session_state.options, key="radio_selection"
+            )
+
+            col1, col2 = st.columns([1, 4])
+
+            with col1:
+                if st.button("回答する", disabled=st.session_state.answered):
+                    check_answer(current_word)
+
+            # 回答メッセージの表示
+            if st.session_state.answer_message:
+                if "正解" in st.session_state.answer_message:
+                    st.success(st.session_state.answer_message)
+                else:
+                    st.markdown(f"<span style='color:red;'>{st.session_state.answer_message}</span>", unsafe_allow_html=True)
+
+            # 回答済みの場合のみ「次へ」ボタンを有効化
+            if st.button("次へ", disabled=not st.session_state.answered):
+                next_question()
 
 if __name__ == "__main__":
     main()
+
