@@ -75,6 +75,9 @@ def check_answer(current_word):
         st.session_state.answered = True
 
 
+import time
+import streamlit as st
+
 # タイマーを開始する関数
 def start_timer():
     if "timer_active" not in st.session_state:
@@ -115,11 +118,12 @@ def start_timer():
 if "time_left" not in st.session_state:
     st.session_state.time_left = 120  # 例: 2分間
 
-if st.button("タイマー開始"):
-    start_timer()
+# アプリケーション起動時にタイマーを自動開始
+start_timer()
 
 if st.button("回答済み"):
     st.session_state.answered = True
+
 
 
 
