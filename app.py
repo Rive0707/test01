@@ -78,26 +78,25 @@ def start_timer():
     if "time_left" not in st.session_state:
         st.session_state.time_left = 30
     timer_placeholder = st.empty()
-    start_time = time.time() #開始時間を記録
+    start_time = time.time()
     total_time = st.session_state.time_left
 
     while st.session_state.time_left > 0 and not st.session_state.answered:
         elapsed_time = time.time() - start_time
         st.session_state.time_left = max(0, total_time - int(elapsed_time))
         m, s = divmod(st.session_state.time_left, 60)
-        timer_placeholder.metric("残り時間", f"{m:02d}:{s:02d}")
-        time.sleep(0.1)  # 0.1秒ごとに更新
+        with timer_placeholder.container(): # containerで囲む
+            st.metric("残り時間", f"{m:02d}:{s:02d}")
+        time.sleep(0.1)
 
-    if st.session_state.time_left <= 0 and not st.session_state.answered: # <=に変更
+    if st.session_state.time_left <= 0 and not st.session_state.answered:
         st.session_state.answer_message = "時間切れ！次の問題に進みます。"
         st.session_state.progress['incorrect'] += 1
         save_progress(st.session_state.progress)
-        st.session_state.time_left = 30 #時間切れになったらタイマーをリセット
-        next_question()
-    elif st.session_state.answered: #回答されたらタイマーをリセット
-        st.session_state.time_left = 30
+        st.session_state.answered = True #時間切れで回答済みにする
+        st.experimental_rerun()  # ★UIを更新して次の問題へ移行★
+    elif st.session_state.answered:
         timer_placeholder.empty()
-
 
 
         # 時間切れの場合の処理
@@ -281,15 +280,23 @@ def main():
                     else:
                         st.error(st.session_state.answer_message, icon="❌")
 
-                # 残り時間の表示とタイマーの開始
-                if not st.session_state.answered:  # 未回答の場合のみタイマー処理
+                # タイマー処理
+                if not st.session_state.answered:
                     if "timer_started" not in st.session_state or not st.session_state.timer_started:
-                        st.session_state.timer_started = True  # タイマー開始フラグを設定
-                        start_timer()  # タイマーを開始
-                else:  # 回答済みの場合
-                    st.session_state.timer_started = False  # タイマー開始フラグをリセット
+                        st.session_state.timer_started = True
+                        start_timer()
+                else:
+                    st.session_state.timer_started = False
                     if "time_left" in st.session_state:
-                        st.session_state.time_left = 30 #回答後にtime_leftをリセットする
+                        st.session_state.time_left = 30
+
+                # 回答処理
+                if st.session_state.selected_option and not st.session_state.answered: #回答が選択されていて、未回答の場合のみ
+                    col1, col2 = st.columns([1, 4])
+                    with col1:
+                        if st.button("回答する"):
+                            st.session_state.answered = True #回答されたらansweredをTrueにする
+                            check_answer(current_word)
 
                 # 回答済みの場合のみ「次へ」ボタンを有効化
                 if st.button("次へ", disabled=not st.session_state.answered):
