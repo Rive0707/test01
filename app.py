@@ -34,6 +34,10 @@ def text_to_audio_base64(text, lang="en"):
 def load_data(file_path):
     return pd.read_csv(file_path)
 
+# 問題をランダムに並び替える
+def shuffle_questions(words):
+    return random.sample(words, len(words))
+
 # 次へボタンのコールバック関数
 def next_question():
     if st.session_state.answered:  # 回答済みの場合のみ次の問題へ
@@ -79,6 +83,8 @@ def main():
         st.session_state.answered = False
     if "answer_message" not in st.session_state:
         st.session_state.answer_message = None
+    if "shuffled_words" not in st.session_state:
+        st.session_state.shuffled_words = None
 
     progress = st.session_state.progress
 
@@ -96,6 +102,7 @@ def main():
         st.session_state.question_progress = 0
         st.session_state.answered = False
         st.session_state.answer_message = None
+        st.session_state.shuffled_words = None
 
     # CSVファイルアップロード
     uploaded_file = st.file_uploader("単語データ（CSV形式）をアップロードしてください", type="csv")
@@ -109,6 +116,7 @@ def main():
                 st.session_state.question_progress = 0
                 st.session_state.answered = False
                 st.session_state.answer_message = None
+                st.session_state.shuffled_words = shuffle_questions(progress['incorrect_words'])
             else:
                 st.sidebar.info("不正解の単語がありません。")
 
@@ -117,18 +125,29 @@ def main():
             st.session_state.question_progress = 0
             st.session_state.answered = False
             st.session_state.answer_message = None
+            st.session_state.shuffled_words = shuffle_questions(word_data.to_dict(orient="records"))
 
-        # 出題モード選択
+        # 出題モード選択と問題のシャッフル
         if st.session_state.review_mode:
-            words_to_study = [word for word in progress['incorrect_words'] if word]
+            if not st.session_state.shuffled_words:
+                st.session_state.shuffled_words = shuffle_questions([word for word in progress['incorrect_words'] if word])
+            words_to_study = st.session_state.shuffled_words
             st.info("復習モードで学習中です。")
         else:
-            words_to_study = word_data.to_dict(orient="records")
+            if not st.session_state.shuffled_words:
+                st.session_state.shuffled_words = shuffle_questions(word_data.to_dict(orient="records"))
+            words_to_study = st.session_state.shuffled_words
 
         # 出題
         if words_to_study:
             if st.session_state.question_progress >= len(words_to_study):
                 st.info("すべての単語を学習しました！")
+                if st.button("最初からやり直す"):
+                    st.session_state.question_progress = 0
+                    st.session_state.shuffled_words = shuffle_questions(words_to_study)
+                    st.session_state.answered = False
+                    st.session_state.answer_message = None
+                    st.session_state.options = []
             else:
                 current_word = words_to_study[st.session_state.question_progress]
 
@@ -148,10 +167,9 @@ def main():
                 # 選択肢の生成（未回答時のみ）
                 if not st.session_state.options:
                     options = [current_word['日本語訳']]
-                    while len(options) < 4:
-                        option = random.choice(word_data['日本語訳'])
-                        if option not in options:
-                            options.append(option)
+                    all_answers = word_data['日本語訳'].tolist()
+                    wrong_answers = [ans for ans in all_answers if ans != current_word['日本語訳']]
+                    options.extend(random.sample(wrong_answers, 3))
                     random.shuffle(options)
                     st.session_state.options = options
 
