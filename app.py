@@ -77,18 +77,20 @@ def check_answer(current_word):
 def start_timer():
     timer_placeholder = st.empty()  # タイマー表示用のプレースホルダー
     while st.session_state.time_left > 0:
-        with timer_placeholder.container():
-            st.warning(f"⏳ 残り時間: {st.session_state.time_left} 秒")
+        with timer_placeholder:
+            st.markdown(f"### ⏳ 残り時間: **{st.session_state.time_left} 秒**")
         time.sleep(1)
         st.session_state.time_left -= 1
         if st.session_state.answered:  # 回答済みならタイマー停止
             break
+        st.experimental_rerun()  # UIを動的に更新
     if st.session_state.time_left == 0 and not st.session_state.answered:
         st.session_state.answer_message = "時間切れ！次の問題に進みます。"
         st.session_state.progress['incorrect'] += 1
         save_progress(st.session_state.progress)
         next_question()
     timer_placeholder.empty()  # タイマー表示をクリア
+
 
 
 # メイン関数
