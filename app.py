@@ -87,8 +87,7 @@ def check_answer(current_word):
         else:
             st.session_state.answer_message = f"不正解！正解は: {current_word['日本語訳']}"
             st.session_state.progress['incorrect'] += 1
-            if current_word not in st.session_state.progress['incorrect_words']:
-                st.session_state.progress['incorrect_words'].append(current_word)
+            st.session_state.incorrect_word = current_word  # 不正解の単語を記憶
         save_progress(st.session_state.progress)
         st.session_state.answered = True
 
@@ -197,7 +196,13 @@ def main():
                 col1, col2 = st.columns([2, 1])
                 with col1:
                     st.write(f"**英単語:** {current_word['英単語']}")
-                    st.write(f"_例文:_ {current_word['例文']}")
+                    # 例文の単語を赤文字で表示
+                    example_sentence = current_word['例文']
+                    highlighted_sentence = []
+                    for word in example_sentence.split():
+                        highlighted_sentence.append(f"<span style='color:red'>{word}</span>")
+                    highlighted_sentence = " ".join(highlighted_sentence)
+                    st.write(f"_例文:_ {highlighted_sentence}", unsafe_allow_html=True)
 
                 with col2:
                     # 対応する画像があれば表示
@@ -233,18 +238,39 @@ def main():
                 col1, col2 = st.columns([1, 4])
                 
                 with col1:
-                    if st.button("回答する", disabled=st.session_state.answered):
-                        check_answer(current_word)
+                    # 回答までの制限時間を設定
+                    timer = st.session_state.timer = st.slider(
+                        "制限時間 (秒)",
+                        min_value=0,
+                        max_value=30,
+                        value=30,
+                        step=1,
+                        key="timer_selection"
+                    )
 
-                # 回答メッセージの表示
+                    if st.button("回答する", disabled=st.session_state.answered):
+                        if timer > 0:
+                            st.session_state.timer -= 1  # 時間カウントダウン
+                        if st.session_state.timer == 0:
+                            st.session_state.answer_message = f"時間切れ！正解は: {current_word['日本語訳']}"
+                            st.session_state.progress['incorrect'] += 1
+                            st.session_state.incorrect_word = current_word  # 不正解の単語を記憶
+                            st.session_state.answered = True
+                            save_progress(st.session_state.progress)
+                        else:
+                            check_answer(current_word)
+
+                # 回答後、時間切れの場合を処理
                 if st.session_state.answer_message:
-                    if "正解" in st.session_state.answer_message:
-                        st.success(st.session_state.answer_message)
-                    else:
+                    if "時間切れ" in st.session_state.answer_message:
                         st.error(st.session_state.answer_message)
+                    elif "不正解" in st.session_state.answer_message:
+                        st.error(st.session_state.answer_message)
+                    else:
+                        st.success(st.session_state.answer_message)
 
                 # 回答済みの場合のみ「次へ」ボタンを有効化
-                if st.button("次へ", disabled=not st.session_state.answered):
+                if st.session_state.answered:
                     next_question()
         else:
             st.info("すべての単語を学習しました！")
