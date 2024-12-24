@@ -5,8 +5,6 @@ from gtts import gTTS
 import base64
 import os
 import json
-from PIL import Image
-import io
 import time
 
 # スコアと進捗を保存するファイル
@@ -16,7 +14,7 @@ PROGRESS_FILE = "progress.json"
 def load_progress():
     if os.path.exists(PROGRESS_FILE):
         with open(PROGRESS_FILE, "r") as f:
-        return json.load(f)
+            return json.load(f)
     else:
         return {"correct": 0, "incorrect": 0, "incorrect_words": []}
 
