@@ -41,6 +41,12 @@ if "options" not in st.session_state:
 if "selected_option" not in st.session_state:
     st.session_state.selected_option = None
 
+# 次の問題に進む関数
+def go_to_next_question():
+    st.session_state.current_question += 1
+    st.session_state.options = []  # 新しい問題のために選択肢をリセット
+    st.session_state.selected_option = None  # 選択状態をリセット
+
 # メイン関数
 def main():
     st.title("英単語学習アプリ")
@@ -84,15 +90,16 @@ def main():
                     options.append(option)
             random.shuffle(options)
             st.session_state.options = options
-            st.session_state.selected_option = None  # 選択肢をリセット
 
         # 選択肢を表示
         selected_option = st.radio(
             "意味を選んでください",
             st.session_state.options,
-            index=st.session_state.selected_option if st.session_state.selected_option is not None else 0,
+            index=st.session_state.options.index(st.session_state.selected_option)
+            if st.session_state.selected_option in st.session_state.options
+            else 0,
         )
-        
+
         # 回答ボタン
         if st.button("回答する", key=f"answer_{current_question_index}"):
             if selected_option == current_word['日本語訳']:
@@ -101,11 +108,9 @@ def main():
             else:
                 st.error(f"不正解！正解は: {current_word['日本語訳']}")
                 st.session_state.incorrect_words.append(current_word['英単語'])
-            
+
             # 次の問題へ
-            st.session_state.current_question += 1
-            st.session_state.options = []  # 新しい問題のために選択肢をリセット
-            st.experimental_rerun()  # ページをリロードして新しい問題を表示
+            go_to_next_question()
 
         # 現在のスコア表示
         st.write(f"現在のスコア: {st.session_state.score}")
@@ -114,4 +119,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
