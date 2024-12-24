@@ -74,27 +74,33 @@ def check_answer(current_word):
         save_progress(st.session_state.progress)
         st.session_state.answered = True
 
-import time
+
 
 # タイマーを開始する関数
 def start_timer():
-    if "timer_active" not in st.session_state or not st.session_state.timer_active:
+    if "timer_active" not in st.session_state:
+        st.session_state.timer_active = False
+    if "time_left" not in st.session_state:
+        st.session_state.time_left = 0
+    if "answered" not in st.session_state:
+        st.session_state.answered = False
+
+    if not st.session_state.timer_active:
         st.session_state.timer_active = True
-        timer_placeholder = st.empty()  # タイマー表示用のプレースホルダー
         total_time = st.session_state.time_left
+        timer_placeholder = st.empty()  # タイマー表示用のプレースホルダー
 
         # カウントダウンタイマーを実行
         for secs in range(total_time, 0, -1):
-            mm, ss = secs // 60, secs % 60
+            if st.session_state.answered:
+                st.session_state.timer_active = False
+                break
+
+            mm, ss = divmod(secs, 60)
             timer_placeholder.metric("残り時間", f"{mm:02d}:{ss:02d}")
             st.session_state.time_left = secs  # 残り時間をセッションに保存
 
             time.sleep(1)  # 1秒ごとに更新
-
-            # ユーザーが回答した場合、タイマーを停止
-            if st.session_state.answered:
-                st.session_state.timer_active = False
-                break
 
         # 時間切れの処理
         if st.session_state.time_left == 0 and not st.session_state.answered:
@@ -105,6 +111,17 @@ def start_timer():
 
         st.session_state.timer_active = False
         timer_placeholder.empty()  # タイマー表示をクリア
+
+# セッション状態の初期化
+if "time_left" not in st.session_state:
+    st.session_state.time_left = 120  # 例: 2分間
+
+if st.button("タイマー開始"):
+    start_timer()
+
+if st.button("回答済み"):
+    st.session_state.answered = True
+
 
 
 
