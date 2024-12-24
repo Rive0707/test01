@@ -10,6 +10,7 @@ import io
 import threading
 import time
 
+
 # スコアと進捗を保存するファイル
 PROGRESS_FILE = "progress.json"
 
@@ -73,15 +74,14 @@ def check_answer(current_word):
         save_progress(st.session_state.progress)
         st.session_state.answered = True
 
-import time
-
+# タイマー部分の修正
 def start_timer():
     if "timer_active" not in st.session_state or not st.session_state.timer_active:
         st.session_state.timer_active = True
         timer_placeholder = st.empty()  # タイマー表示用のプレースホルダー
         total_time = st.session_state.time_left
 
-        # タイマーを1秒ごとに減らしていく
+        # カウントダウンを1秒ごとに更新
         for remaining_time in range(total_time, 0, -1):
             st.session_state.time_left = remaining_time  # 残り時間をセッションに保存
             progress_value = remaining_time / total_time  # 進行状況バーの値
@@ -108,6 +108,7 @@ def start_timer():
 
         st.session_state.timer_active = False
         timer_placeholder.empty()  # タイマー表示をクリア
+
 
 
         # 時間切れの場合の処理
