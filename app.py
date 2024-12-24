@@ -78,31 +78,38 @@ def start_timer():
         st.session_state.timer_active = True
         timer_placeholder = st.empty()
 
-        progress_bar = timer_placeholder.progress(1.0)
+        progress_bar = timer_placeholder.progress(1.0)  # 進行状況バーの作成
         start_time = time.time()
         total_time = st.session_state.time_left
 
+        # 残り時間が0になるまでカウントダウン
         while st.session_state.time_left > 0:
             elapsed_time = time.time() - start_time
-            st.session_state.time_left = max(0, total_time - int(elapsed_time))
-            progress_value = st.session_state.time_left / total_time
-            progress_bar.progress(progress_value)
+            st.session_state.time_left = max(0, total_time - int(elapsed_time))  # 時間経過を差し引いて残り時間を計算
+            progress_value = st.session_state.time_left / total_time  # 進行状況バーの進捗を計算
 
+            # 残り時間を表示
             with timer_placeholder.container():
                 st.markdown(f"### ⏳ 残り時間: **{st.session_state.time_left} 秒**")
-            time.sleep(1)
+            
+            progress_bar.progress(progress_value)  # 進行状況バーを更新
+            time.sleep(1)  # 1秒待つ
 
+            # 回答が完了した場合はタイマーを停止
             if st.session_state.answered:
                 st.session_state.timer_active = False
                 break
 
+        # 時間切れの場合の処理
         if st.session_state.time_left == 0 and not st.session_state.answered:
             st.session_state.answer_message = "時間切れ！次の問題に進みます。"
             st.session_state.progress['incorrect'] += 1
             save_progress(st.session_state.progress)
-            next_question()
+            next_question()  # 次の問題へ進む
+
         st.session_state.timer_active = False
-        timer_placeholder.empty()
+        timer_placeholder.empty()  # タイマー表示をクリア
+
 
 # メイン関数
 def main():
