@@ -75,7 +75,7 @@ def main():
         if st.button("単語を再生", key=f"word_{current_question_index}"):
             play_audio(current_word["英単語"])
         
-        # 選択肢をシャッフル
+        # 選択肢をシャッフル（問題が変わるときに更新）
         if "options" not in st.session_state or st.session_state.current_question != current_question_index:
             options = [current_word['日本語訳']]
             while len(options) < 4:
@@ -84,6 +84,7 @@ def main():
                     options.append(option)
             random.shuffle(options)
             st.session_state.options = options
+            st.session_state.selected_option = None  # 選択肢リセット
 
         # 選択肢を表示（状態を管理）
         selected_option = st.radio(
@@ -114,3 +115,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
