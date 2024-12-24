@@ -90,7 +90,7 @@ def start_timer():
 
             with timer_placeholder.container():
                 st.markdown(f"### ⏳ 残り時間: **{st.session_state.time_left} 秒**")
-            time.sleep(0.1)
+            time.sleep(1)
 
             if st.session_state.answered:
                 st.session_state.timer_active = False
