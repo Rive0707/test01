@@ -8,6 +8,7 @@ import json
 from PIL import Image
 import io
 import threading
+import time
 
 # スコアと進捗を保存するファイル
 PROGRESS_FILE = "progress.json"
@@ -89,17 +90,15 @@ def start_timer():
         time.sleep(1)  # 1秒ごとに減らす
         timer_callback()
 
-# メイン関数内でのタイマー開始
-if not st.session_state.answered:
-    threading.Thread(target=start_timer, daemon=True).start()
-
-
 # メイン関数
 def main():
     st.title("英単語学習アプリ")
     st.subheader("英単語を楽しく学習しよう！")
 
     # セッション状態初期化
+    if "answered" not in st.session_state:  # 'answered' が無ければ初期化
+        st.session_state.answered = False  # これで 'answered' を False に設定
+
     if "progress" not in st.session_state:
         st.session_state.progress = load_progress()
     if "current_word" not in st.session_state:
@@ -112,8 +111,6 @@ def main():
         st.session_state.selected_option = None
     if "question_progress" not in st.session_state:
         st.session_state.question_progress = 0
-    if "answered" not in st.session_state:
-        st.session_state.answered = False
     if "answer_message" not in st.session_state:
         st.session_state.answer_message = None
     if "shuffled_words" not in st.session_state:
@@ -218,52 +215,39 @@ def main():
 
                 if st.button("単語を再生"):
                     audio_base64 = text_to_audio_base64(current_word['英単語'])
-                    audio_html = f"""<audio controls autoplay><source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3"></audio>"""
+                    audio_html = f"""
+                    <audio controls autoplay>
+                        <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
+                        Your browser does not support the audio element.
+                    </audio>
+                    """
                     st.markdown(audio_html, unsafe_allow_html=True)
 
-                if st.button("例文を再生"):
-                    audio_base64 = text_to_audio_base64(current_word['例文'])
-                    audio_html = f"""<audio controls autoplay><source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3"></audio>"""
-                    st.markdown(audio_html, unsafe_allow_html=True)
+                # 選択肢
+                options = [current_word['日本語訳']]
+                while len(options) < 4:
+                    option = random.choice(word_data['日本語訳'])
+                    if option not in options:
+                        options.append(option)
+                random.shuffle(options)
+                selected_option = st.radio("意味を選んでください", options)
 
-                # 選択肢の生成（未回答時のみ）
-                if not st.session_state.options:
-                    options = [current_word['日本語訳']]
-                    all_answers = word_data['日本語訳'].tolist()
-                    wrong_answers = [ans for ans in all_answers if ans != current_word['日本語訳']]
-                    options.extend(random.sample(wrong_answers, 3))
-                    random.shuffle(options)
-                    st.session_state.options = options
+                # 回答の確認
+                st.session_state.selected_option = selected_option
+                if st.button("回答する"):
+                    check_answer(current_word)
 
-                st.session_state.selected_option = st.radio(
-                    "意味を選んでください", st.session_state.options, key="radio_selection"
-                )
-
-                col1, col2 = st.columns([1, 4])
-                
-                with col1:
-                    if st.button("回答する", disabled=st.session_state.answered):
-                        check_answer(current_word)
-
-                # 回答メッセージの表示
+                # 回答メッセージ
                 if st.session_state.answer_message:
-                    if "正解" in st.session_state.answer_message:
-                        st.success(st.session_state.answer_message)
-                    else:
-                        st.error(st.session_state.answer_message, icon="❌")
+                    st.success(st.session_state.answer_message)
 
-                # 残り時間の表示
-                st.warning(f"残り時間: {st.session_state.time_left} 秒", icon="⏳")
-
-                # タイマーの開始
-                if not st.session_state.answered:
-                    st.interval(1, timer_callback)
-
-                # 回答済みの場合のみ「次へ」ボタンを有効化
-                if st.button("次へ", disabled=not st.session_state.answered):
+                # 次へボタン
+                if st.button("次へ"):
                     next_question()
-        else:
-            st.info("すべての単語を学習しました！")
+
+                # タイマー
+                if not st.session_state.answered:
+                    threading.Thread(target=start_timer, daemon=True).start()
 
 if __name__ == "__main__":
     main()
