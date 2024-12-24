@@ -75,30 +75,22 @@ def check_answer(current_word):
         st.session_state.answered = True
 
 
-import time
-import streamlit as st
-
-# タイマーを開始する関数
+# タイマーの設定と実行
 def start_timer():
-    if "timer_active" not in st.session_state:
-        st.session_state.timer_active = False
-    if "time_left" not in st.session_state:
-        st.session_state.time_left = 0
-    if "answered" not in st.session_state:
-        st.session_state.answered = False
-
-    if not st.session_state.timer_active:
+    if "timer_active" not in st.session_state or not st.session_state.timer_active:
         st.session_state.timer_active = True
-        total_time = st.session_state.time_left
         timer_placeholder = st.empty()  # タイマー表示用のプレースホルダー
+        total_time = st.session_state.time_left
 
         # カウントダウンタイマーを実行
         for secs in range(total_time, 0, -1):
-            if st.session_state.answered:
+            if st.session_state.answered:  # ユーザーが回答した場合、タイマーを停止
                 st.session_state.timer_active = False
                 break
 
+            # 残り時間を分と秒に分ける
             mm, ss = divmod(secs, 60)
+            # タイマーを表示
             timer_placeholder.metric("残り時間", f"{mm:02d}:{ss:02d}")
             st.session_state.time_left = secs  # 残り時間をセッションに保存
 
@@ -114,15 +106,6 @@ def start_timer():
         st.session_state.timer_active = False
         timer_placeholder.empty()  # タイマー表示をクリア
 
-# セッション状態の初期化
-if "time_left" not in st.session_state:
-    st.session_state.time_left = 120  # 例: 2分間
-
-# アプリケーション起動時にタイマーを自動開始
-start_timer()
-
-if st.button("回答済み"):
-    st.session_state.answered = True
 
 
 
