@@ -7,6 +7,7 @@ import os
 import json
 from PIL import Image
 import io
+import zipfile
 
 # スコアと進捗を保存するファイル
 PROGRESS_FILE = "progress.json"
@@ -35,6 +36,27 @@ def text_to_audio_base64(text, lang="en"):
 # CSVデータをロード
 def load_data(file_path):
     return pd.read_csv(file_path)
+
+# ZIPファイルから画像を読み込む
+def load_images_from_zip(zip_file):
+    images = {}
+    with zipfile.ZipFile(zip_file) as z:
+        for filename in z.namelist():
+            if not filename.endswith('/'):  # ディレクトリは除外
+                # ファイル名から拡張子と階層を除去
+                base_name = os.path.splitext(os.path.basename(filename))[0]
+                try:
+                    with z.open(filename) as f:
+                        image_data = f.read()
+                        # 画像として開けるかテスト
+                        try:
+                            Image.open(io.BytesIO(image_data))
+                            images[base_name] = image_data
+                        except:
+                            continue
+                except:
+                    continue
+    return images
 
 # 画像をロード
 def load_image(image_bytes):
@@ -115,20 +137,17 @@ def main():
         st.session_state.answer_message = None
         st.session_state.shuffled_words = None
 
-    # CSVファイルとイメージファイルのアップロード
+    # CSVファイルとZIPファイルのアップロード
     col1, col2 = st.columns(2)
     with col1:
         uploaded_file = st.file_uploader("単語データ（CSV形式）をアップロードしてください", type="csv")
     with col2:
-        uploaded_images = st.file_uploader("画像をアップロードしてください", type=None, accept_multiple_files=True)
+        uploaded_zip = st.file_uploader("画像フォルダ（ZIP形式）をアップロードしてください", type="zip")
         
-    # 画像ファイルの処理
-    if uploaded_images:
-        st.session_state.image_files = {}
-        for image_file in uploaded_images:
-            # ファイル名から拡張子を除いた部分を取得
-            image_name = os.path.splitext(image_file.name)[0]
-            st.session_state.image_files[image_name] = image_file.read()
+    # ZIPファイルの処理
+    if uploaded_zip:
+        st.session_state.image_files = load_images_from_zip(uploaded_zip)
+        st.success(f"{len(st.session_state.image_files)}個の画像を読み込みました。")
 
     if uploaded_file:
         word_data = load_data(uploaded_file)
