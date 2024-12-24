@@ -76,29 +76,41 @@ def check_answer(current_word):
 def start_timer():
     if "timer_active" not in st.session_state or not st.session_state.timer_active:
         st.session_state.timer_active = True
-        timer_placeholder = st.empty()
+        timer_placeholder = st.empty()  # タイマー表示用のプレースホルダー
 
-        progress_bar = timer_placeholder.progress(1.0)  # 進行状況バーの作成
+        progress_bar = timer_placeholder.progress(1.0)  # 初期状態で進行状況バーをセット
         start_time = time.time()
         total_time = st.session_state.time_left
 
-        # 残り時間が0になるまでカウントダウン
+        # 残り時間が0になるまで1秒ごとにカウントダウン
         while st.session_state.time_left > 0:
             elapsed_time = time.time() - start_time
-            st.session_state.time_left = max(0, total_time - int(elapsed_time))  # 時間経過を差し引いて残り時間を計算
-            progress_value = st.session_state.time_left / total_time  # 進行状況バーの進捗を計算
+            st.session_state.time_left = max(0, total_time - int(elapsed_time))  # 残り時間の計算
+            progress_value = st.session_state.time_left / total_time  # 残り時間に基づく進行状況
+
+            # 進行状況バーを更新
+            progress_bar.progress(progress_value)
 
             # 残り時間を表示
             with timer_placeholder.container():
                 st.markdown(f"### ⏳ 残り時間: **{st.session_state.time_left} 秒**")
             
-            progress_bar.progress(progress_value)  # 進行状況バーを更新
-            time.sleep(1)  # 1秒待つ
+            time.sleep(1)  # 1秒ごとに更新
 
-            # 回答が完了した場合はタイマーを停止
             if st.session_state.answered:
                 st.session_state.timer_active = False
                 break
+
+        # 時間切れの場合の処理
+        if st.session_state.time_left == 0 and not st.session_state.answered:
+            st.session_state.answer_message = "時間切れ！次の問題に進みます。"
+            st.session_state.progress['incorrect'] += 1
+            save_progress(st.session_state.progress)
+            next_question()  # 次の問題に進む
+
+        st.session_state.timer_active = False
+        timer_placeholder.empty()  # タイマー表示をクリア
+
 
         # 時間切れの場合の処理
         if st.session_state.time_left == 0 and not st.session_state.answered:
