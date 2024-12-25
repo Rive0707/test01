@@ -120,19 +120,20 @@ def shuffle_questions(words):
     return random.sample(words, len(words))
 
 def move_to_next_question():
-    # セッション状態をリセット
-    st.session_state.clear()  # これでセッションをリセットします
-    
-    # 必要な初期化を行う
-    st.session_state.question_progress = 0
+    # セッション状態の更新
+    st.session_state.question_progress += 1
     st.session_state.options = []
     st.session_state.selected_option = None
     st.session_state.answered = False
     st.session_state.answer_message = None
     reset_timer()  # タイマーをリセット
+
+    # セッション状態をデバッグ表示
+    st.write("セッション状態:", st.session_state)
     
-    # ページの再描画
+    # 再描画
     st.experimental_rerun()
+
 
 
 
