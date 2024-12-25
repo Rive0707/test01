@@ -127,16 +127,21 @@ def move_to_next_question():
 def check_answer(current_word):
     if not st.session_state.answered and not st.session_state.time_expired:
         if st.session_state.selected_option == current_word['日本語訳']:
-            st.session_state.answer_message = "正解です！"
+            st.session_state.answer_message = (
+                '<div style="background-color: #d4edda; padding: 10px; border-radius: 5px;">正解です！</div>'
+            )
             st.session_state.progress['correct'] += 1
         else:
-            st.session_state.answer_message = f"不正解！正解は: {current_word['日本語訳']}"
+            st.session_state.answer_message = (
+                f'<div style="background-color: #f8d7da; padding: 10px; border-radius: 5px;">'
+                f'不正解！正解は: {current_word["日本語訳"]}</div>'
+            )
             st.session_state.progress['incorrect'] += 1
             if current_word not in st.session_state.progress['incorrect_words']:
                 st.session_state.progress['incorrect_words'].append(current_word)
         save_progress(st.session_state.progress)
         st.session_state.answered = True
-        time.sleep(1)
+        time.sleep(1)  # フィードバック表示のための短い待機
         move_to_next_question()
 
 def main():
@@ -253,13 +258,16 @@ def main():
                 current_word = words_to_study[st.session_state.question_progress]
 
                 # タイマーの表示
-                timer_placeholder = st.empty()
-                with timer_placeholder:
-                    if not st.session_state.answered and not st.session_state.time_expired:
-                        components.html(
-                            create_timer_html(TIMER_DURATION),
-                            height=100,
-                        )
+                if not st.session_state.answered and not st.session_state.time_expired:
+                    components.html(create_timer_html(TIMER_DURATION), height=100)
+                
+                # 回答ボタンと結果メッセージの処理
+                if st.session_state.answer_message:
+                    st.markdown(st.session_state.answer_message, unsafe_allow_html=True)
+                
+                if st.button("回答する", disabled=st.session_state.answered or st.session_state.time_expired):
+                    check_answer(current_word)
+
 
                 # 問題と選択肢の表示
                 col1, col2 = st.columns([2, 1])
