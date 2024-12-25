@@ -120,34 +120,34 @@ def shuffle_questions(words):
     return random.sample(words, len(words))
 
 def move_to_next_question():
-    # 問題進行状況を更新
     st.session_state.question_progress += 1
     st.session_state.options = []
     st.session_state.selected_option = None
     st.session_state.answered = False
     st.session_state.answer_message = None
+    st.session_state.time_expired = False
     reset_timer()  # タイマーをリセット
-    
-    # セッション状態が更新された後にページをリロード
     st.experimental_rerun()
-
-
-
 
 def check_answer(current_word):
     if not st.session_state.answered and not st.session_state.time_expired:
         if st.session_state.selected_option == current_word['日本語訳']:
-            st.session_state.answer_message = "正解です！"
+            st.session_state.answer_message = "<div style='color: green; font-weight: bold;'>正解です！</div>"
             st.session_state.progress['correct'] += 1
         else:
-            st.session_state.answer_message = f"不正解！正解は: {current_word['日本語訳']}"
+            st.session_state.answer_message = (
+                f"<div style='color: red; font-weight: bold;'>不正解！正解は: {current_word['日本語訳']}</div>"
+            )
             st.session_state.progress['incorrect'] += 1
             if current_word not in st.session_state.progress['incorrect_words']:
                 st.session_state.progress['incorrect_words'].append(current_word)
         save_progress(st.session_state.progress)
         st.session_state.answered = True
-        time.sleep(1)
-        move_to_next_question()
+
+        # 「次へ」ボタンを表示する
+        st.button("次へ", on_click=move_to_next_question)
+
+
 
 def main():
     st.title("英単語学習アプリ")
