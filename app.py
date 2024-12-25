@@ -180,7 +180,7 @@ def main():
     if "time_expired" not in st.session_state:
         st.session_state.time_expired = False
     if "time_remaining" not in st.session_state:
-    st.session_state.time_remaining = TIMER_DURATION
+        st.session_state.time_remaining = TIMER_DURATION
 
 
     # サイドバーの設定
