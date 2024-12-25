@@ -155,11 +155,11 @@ def check_answer(current_word):
 
 def main():
     if 'should_rerun' not in st.session_state:
-    st.session_state.should_rerun = False
+        st.session_state.should_rerun = False
 
     if st.session_state.should_rerun:
-    st.session_state.should_rerun = False  # フラグをリセット
-    st.experimental_rerun()  # 再描画をトリガー
+        st.session_state.should_rerun = False  # フラグをリセット
+        st.experimental_rerun()  # 再描画をトリガー
     
     st.title("英単語学習アプリ")
     st.subheader("英単語を楽しく学習しよう！")
