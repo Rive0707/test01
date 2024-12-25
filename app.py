@@ -120,14 +120,17 @@ def shuffle_questions(words):
     return random.sample(words, len(words))
 
 def move_to_next_question():
+    # 問題進行状況を更新
     st.session_state.question_progress += 1
     st.session_state.options = []
     st.session_state.selected_option = None
     st.session_state.answered = False
     st.session_state.answer_message = None
     reset_timer()  # タイマーをリセット
-    # 状態を更新後にページを更新
-    st.write("")  # 空の書き込みでページを再描画
+    
+    # セッション状態が更新された後にページをリロード
+    st.experimental_rerun()
+
 
 
 
