@@ -128,11 +128,8 @@ def move_to_next_question():
     st.session_state.answer_message = None
     reset_timer()  # タイマーをリセット
 
-    # ストリームリットでの再描画
-    st.rerun()  # これで画面を再描画
-
-
-
+    # フラグを設定して再実行を促す
+    st.session_state.should_rerun = True
 
 
 
@@ -157,6 +154,13 @@ def check_answer(current_word):
 
 
 def main():
+    if 'should_rerun' not in st.session_state:
+    st.session_state.should_rerun = False
+
+    if st.session_state.should_rerun:
+    st.session_state.should_rerun = False  # フラグをリセット
+    st.experimental_rerun()  # 再描画をトリガー
+    
     st.title("英単語学習アプリ")
     st.subheader("英単語を楽しく学習しよう！")
 
