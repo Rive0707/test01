@@ -154,15 +154,18 @@ def check_answer(current_word):
 
 
 def main():
+    # 1. session_state にフラグを追加 (最初に追加)
     if 'should_rerun' not in st.session_state:
         st.session_state.should_rerun = False
-
+    
+    # 2. フラグが True ならば再描画
     if st.session_state.should_rerun:
         st.session_state.should_rerun = False  # フラグをリセット
-        st.experimental_rerun()  # 再描画をトリガー
-    
+        st.rerun()  # 再描画をトリガー
+
     st.title("英単語学習アプリ")
-    st.subheader("英単語を楽しく学習しよう！")
+    st.subheader("英単語を学習しよう！")
+
 
     # セッション状態の初期化
     if "progress" not in st.session_state:
