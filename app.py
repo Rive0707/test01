@@ -257,16 +257,17 @@ def main():
             else:
                 current_word = words_to_study[st.session_state.question_progress]
 
-                # タイマーの表示
+                # タイマーとボタンの処理
                 if not st.session_state.answered and not st.session_state.time_expired:
                     components.html(create_timer_html(TIMER_DURATION), height=100)
                 
-                # 回答ボタンと結果メッセージの処理
                 if st.session_state.answer_message:
                     st.markdown(st.session_state.answer_message, unsafe_allow_html=True)
                 
-                if st.button("回答する", disabled=st.session_state.answered or st.session_state.time_expired):
+                # 回答ボタン
+                if st.button("回答する", key="answer_button", disabled=st.session_state.answered or st.session_state.time_expired):
                     check_answer(current_word)
+
 
 
                 # 問題と選択肢の表示
