@@ -123,6 +123,16 @@ def move_to_next_question():
     st.experimental_rerun()
 
 
+def move_to_next_question():
+    st.session_state.question_progress += 1
+    st.session_state.options = []
+    st.session_state.selected_option = None
+    st.session_state.answered = False
+    st.session_state.answer_message = None
+    st.session_state.time_expired = False
+    reset_timer()  # タイマーをリセット
+    st.experimental_rerun()
+
 def check_answer(current_word):
     if not st.session_state.answered and not st.session_state.time_expired:
         if st.session_state.selected_option == current_word['日本語訳']:
@@ -137,6 +147,11 @@ def check_answer(current_word):
                 st.session_state.progress['incorrect_words'].append(current_word)
         save_progress(st.session_state.progress)
         st.session_state.answered = True
+
+        # 「次へ」ボタンを表示する
+        st.button("次へ", on_click=move_to_next_question)
+
+
 
 
 def main():
