@@ -10,6 +10,7 @@ import io
 import zipfile
 import time
 import re
+from datetime import datetime
 
 # スコアと進捗を保存するファイル
 PROGRESS_FILE = "progress.json"
@@ -74,15 +75,16 @@ def load_image(image_bytes):
 def shuffle_questions(words):
     return random.sample(words, len(words))
 
-def next_question():
-    if st.session_state.answered or st.session_state.time_expired:
-        st.session_state.question_progress += 1
-        st.session_state.options = []
-        st.session_state.selected_option = None
-        st.session_state.answered = False
-        st.session_state.answer_message = None
-        st.session_state.start_time = time.time()
-        st.session_state.time_expired = False
+def move_to_next_question():
+    st.session_state.question_progress += 1
+    st.session_state.options = []
+    st.session_state.selected_option = None
+    st.session_state.answered = False
+    st.session_state.answer_message = None
+    st.session_state.start_time = time.time()
+    st.session_state.time_expired = False
+    st.session_state.last_update = time.time()
+    st.experimental_rerun()
 
 def check_answer(current_word):
     if not st.session_state.answered and not st.session_state.time_expired:
@@ -96,6 +98,9 @@ def check_answer(current_word):
                 st.session_state.progress['incorrect_words'].append(current_word)
         save_progress(st.session_state.progress)
         st.session_state.answered = True
+        # 回答後1秒待って次の問題に自動的に移動
+        time.sleep(1)
+        move_to_next_question()
 
 def main():
     st.title("英単語学習アプリ")
@@ -124,6 +129,8 @@ def main():
         st.session_state.image_files = {}
     if "start_time" not in st.session_state:
         st.session_state.start_time = time.time()
+    if "last_update" not in st.session_state:
+        st.session_state.last_update = time.time()
     if "time_expired" not in st.session_state:
         st.session_state.time_expired = False
 
@@ -145,6 +152,7 @@ def main():
         st.session_state.answer_message = None
         st.session_state.shuffled_words = None
         st.session_state.start_time = time.time()
+        st.session_state.last_update = time.time()
         st.session_state.time_expired = False
 
     col1, col2 = st.columns(2)
@@ -168,6 +176,7 @@ def main():
                 st.session_state.answer_message = None
                 st.session_state.shuffled_words = shuffle_questions(progress['incorrect_words'])
                 st.session_state.start_time = time.time()
+                st.session_state.last_update = time.time()
             else:
                 st.sidebar.info("不正解の単語がありません。")
 
@@ -178,6 +187,7 @@ def main():
             st.session_state.answer_message = None
             st.session_state.shuffled_words = shuffle_questions(word_data.to_dict(orient="records"))
             st.session_state.start_time = time.time()
+            st.session_state.last_update = time.time()
 
         if st.session_state.review_mode:
             if not st.session_state.shuffled_words:
@@ -202,17 +212,25 @@ def main():
                     st.session_state.answer_message = None
                     st.session_state.options = []
                     st.session_state.start_time = time.time()
+                    st.session_state.last_update = time.time()
                     st.session_state.time_expired = False
             else:
                 current_word = words_to_study[st.session_state.question_progress]
 
-                # タイマー表示
-                elapsed_time = time.time() - st.session_state.start_time
+                # タイマー表示（1秒ごとに更新）
+                current_time = time.time()
+                elapsed_time = current_time - st.session_state.start_time
                 remaining_time = max(0, TIMER_DURATION - elapsed_time)
                 
-                # プログレスバーでタイマーを表示
-                progress_bar = st.progress(remaining_time / TIMER_DURATION)
-                st.write(f"残り時間: {int(remaining_time)}秒")
+                # タイマーの表示を更新
+                timer_placeholder = st.empty()
+                with timer_placeholder.container():
+                    st.markdown(f"""
+                        <div style="font-size: 24px; font-weight: bold; text-align: center; color: {'red' if remaining_time < 10 else 'black'};">
+                            残り時間: {int(remaining_time)}秒
+                        </div>
+                        """, unsafe_allow_html=True)
+                    progress_bar = st.progress(remaining_time / TIMER_DURATION)
 
                 # 時間切れチェック
                 if remaining_time <= 0 and not st.session_state.answered and not st.session_state.time_expired:
@@ -222,11 +240,12 @@ def main():
                         st.session_state.progress['incorrect_words'].append(current_word)
                     save_progress(st.session_state.progress)
                     st.error(f"時間切れ！正解は: {current_word['日本語訳']}")
+                    time.sleep(1)
+                    move_to_next_question()
 
                 col1, col2 = st.columns([2, 1])
                 with col1:
                     st.write(f"**英単語:** {current_word['英単語']}")
-                    # 例文中の単語をハイライト表示
                     highlighted_sentence = highlight_word_in_sentence(current_word['例文'], current_word['英単語'])
                     st.markdown(f"_例文:_ {highlighted_sentence}", unsafe_allow_html=True)
 
@@ -259,11 +278,8 @@ def main():
                     "意味を選んでください", st.session_state.options, key="radio_selection"
                 )
 
-                col1, col2 = st.columns([1, 4])
-                
-                with col1:
-                    if st.button("回答する", disabled=st.session_state.answered or st.session_state.time_expired):
-                        check_answer(current_word)
+                if st.button("回答する", disabled=st.session_state.answered or st.session_state.time_expired):
+                    check_answer(current_word)
 
                 if st.session_state.answer_message:
                     if "正解" in st.session_state.answer_message:
@@ -271,8 +287,6 @@ def main():
                     else:
                         st.markdown(f'<p style="color: red;">{st.session_state.answer_message}</p>', unsafe_allow_html=True)
 
-                if st.button("次へ", disabled=not (st.session_state.answered or st.session_state.time_expired)):
-                    next_question()
         else:
             st.info("すべての単語を学習しました！")
 
