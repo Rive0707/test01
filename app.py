@@ -126,7 +126,9 @@ def move_to_next_question():
     st.session_state.answered = False
     st.session_state.answer_message = None
     reset_timer()  # タイマーをリセット
-    st.experimental_rerun()
+    # 状態を更新後にページを更新
+    st.write("")  # 空の書き込みでページを再描画
+
 
 
 def check_answer(current_word):
