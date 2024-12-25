@@ -16,6 +16,12 @@ import re
 PROGRESS_FILE = "progress.json"
 TIMER_DURATION = 30
 
+def reset_timer():
+    """タイマーをリセットする"""
+    st.session_state.start_time = time.time()  # 現在の時刻をスタート時間として設定
+    st.session_state.time_expired = False  # タイマーが終了していないことを設定
+
+
 # カスタムタイマーコンポーネントのHTML/JavaScript
 def create_timer_html(duration):
     return f"""
@@ -132,6 +138,7 @@ def move_to_next_question():
     st.session_state.time_expired = False
     reset_timer()  # タイマーをリセット
     st.experimental_rerun()
+
 
 def check_answer(current_word):
     if not st.session_state.answered and not st.session_state.time_expired:
