@@ -128,9 +128,9 @@ def move_to_next_question():
     st.session_state.answer_message = None
     reset_timer()  # タイマーをリセット
 
-    # ストリームリットでの状態管理を使って、ボタンが押されたタイミングでページを再描画
-    if st.session_state.question_progress > 0:  # この条件を変更して、更新されたタイミングで再描画
-        st.experimental_rerun()  # 状態更新後に再描画を強制
+    # ストリームリットでの再描画
+    st.rerun()  # これで画面を再描画
+
 
 
 
