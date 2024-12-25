@@ -110,6 +110,12 @@ def load_image(image_bytes):
     except Exception:
         return None
 
+# タイマーをリセットする関数
+def reset_timer():
+    st.session_state.time_remaining = TIMER_DURATION
+    st.session_state.answered = False
+
+
 def shuffle_questions(words):
     return random.sample(words, len(words))
 
@@ -173,6 +179,9 @@ def main():
         st.session_state.start_time = time.time()
     if "time_expired" not in st.session_state:
         st.session_state.time_expired = False
+    if "time_remaining" not in st.session_state:
+    st.session_state.time_remaining = TIMER_DURATION
+
 
     # サイドバーの設定
     st.sidebar.markdown("### スコア")
@@ -253,21 +262,23 @@ def main():
                     st.session_state.options = []
                     st.session_state.start_time = time.time()
                     st.session_state.time_expired = False
+                    reset_timer()
                     st.rerun()
             else:
                 current_word = words_to_study[st.session_state.question_progress]
 
-                # タイマーとボタンの処理
-                if not st.session_state.answered and not st.session_state.time_expired:
-                    components.html(create_timer_html(TIMER_DURATION), height=100)
-                
-                if st.session_state.answer_message:
-                    st.markdown(st.session_state.answer_message, unsafe_allow_html=True)
-                
-                # 回答ボタン
-                if st.button("回答する", key="answer_button", disabled=st.session_state.answered or st.session_state.time_expired):
-                    check_answer(current_word)
-
+                # タイマーの表示
+                timer_placeholder = st.empty()
+                with timer_placeholder:
+                    if not st.session_state.answered and st.session_state.time_remaining > 0:
+                        components.html(
+                            create_timer_html(st.session_state.time_remaining),
+                            height=100,
+                        )
+                        time.sleep(1)
+                        st.session_state.time_remaining -= 1
+                    elif st.session_state.time_remaining == 0:
+                        st.error("時間切れ！")
 
 
                 # 問題と選択肢の表示
@@ -308,6 +319,7 @@ def main():
 
                 if st.button("回答する", disabled=st.session_state.answered or st.session_state.time_expired):
                     check_answer(current_word)
+                    reset_timer()
 
                 if st.session_state.answer_message:
                     if "正解" in st.session_state.answer_message:
